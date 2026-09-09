@@ -58,7 +58,23 @@ export function createMcpServer(httpOpts: HttpClientOptions): Server {
       };
     }
 
-    const body = (args ?? {}) as Record<string, unknown>;
+    let body = (args ?? {}) as Record<string, unknown>;
+    const defaultWikiId = (process.env.KNOWLEDGE_WIKI_ID as string) || "wiki-9sr5qg3i";
+    if (name.startsWith("wiki_") && !body.wiki_id) {
+      body.wiki_id = defaultWikiId;
+    }
+    if (name === "wiki_write") {
+      body = {
+        team_id: (body.team_id as string) || process.env.KNOWLEDGE_TEAM_ID || "team-lgjymhjjpp",
+        wiki_id: (body.wiki_id as string) || defaultWikiId,
+        pages: [
+          {
+            ref: (body.title as string) || (body.ref as string) || "note",
+            content: (body.content as string) || "",
+          },
+        ],
+      };
+    }
     try {
       const data = await callApi(httpOpts, tool.endpoint, body);
 
@@ -89,8 +105,15 @@ export function createMcpServer(httpOpts: HttpClientOptions): Server {
   return server;
 }
 
+import { fileURLToPath } from "url";
+import path from "path";
+
 // Start server when run directly
-if (import.meta.url === `file://${process.argv[1]}`) {
+const isMain = process.argv[1] && (
+  fileURLToPath(import.meta.url) === process.argv[1] ||
+  path.resolve(fileURLToPath(import.meta.url)) === path.resolve(process.argv[1])
+);
+if (isMain) {
   const baseUrl = process.env.KNOWLEDGE_API_URL || "http://localhost:8421";
   const token = process.env.KNOWLEDGE_API_TOKEN;
 

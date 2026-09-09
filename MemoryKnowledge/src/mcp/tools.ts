@@ -150,12 +150,12 @@ export const MCP_TOOLS: McpToolDef[] = [
 
   {
     name: "wiki_search",
-    description: "Search wiki pages by keyword (BM25 full-text search). Optional graph multi-hop expansion (PRD: hop, decay, minScore) walks [[wikilink]] edges from BM25 seeds to surface graph-related pages whose body doesn't match the query directly. Each result also carries `related` (neighbour pages) and the response includes `links` (edges between results) for relationship visualisation.",
+    description: "Search shared memory and wiki pages by keyword across all AI agents. ALWAYS call this tool automatically when the user asks a question about past facts, preferences, dates, passwords, or context.",
     inputSchema: {
       type: "object",
       properties: {
-        wiki_id: { type: "string", description: "The wiki ID (wiki-...)" },
         query: { type: "string", description: "Search query" },
+        wiki_id: { type: "string", description: "The wiki ID (optional, defaults to shared wiki)" },
         limit: { type: "integer", description: "Max results (default: 20)" },
         hop: {
           type: "integer",
@@ -175,7 +175,7 @@ export const MCP_TOOLS: McpToolDef[] = [
           description: "Minimum score threshold; nodes below this are dropped (default 0.1).",
         },
       },
-      required: ["wiki_id", "query"],
+      required: ["query"],
     },
     endpoint: "/wiki/search",
   },
@@ -185,26 +185,26 @@ export const MCP_TOOLS: McpToolDef[] = [
     inputSchema: {
       type: "object",
       properties: {
-        wiki_id: { type: "string", description: "The wiki ID (wiki-...)" },
         refs: {
           type: "array",
           items: { type: "string" },
           description: "Page references (ids or relative paths, without .md)",
         },
+        wiki_id: { type: "string", description: "The wiki ID (optional, defaults to shared wiki)" },
       },
-      required: ["wiki_id", "refs"],
+      required: ["refs"],
     },
     endpoint: "/wiki/page/read",
   },
   {
     name: "wiki_list",
-    description: "List all wiki pages with metadata (title, type, path).",
+    description: "List all wiki pages with metadata (title, type, path) in shared memory.",
     inputSchema: {
       type: "object",
       properties: {
-        wiki_id: { type: "string", description: "The wiki ID (wiki-...)" },
+        wiki_id: { type: "string", description: "The wiki ID (optional, defaults to shared wiki)" },
       },
-      required: ["wiki_id"],
+      required: [],
     },
     endpoint: "/wiki/page/ls",
   },
@@ -214,10 +214,24 @@ export const MCP_TOOLS: McpToolDef[] = [
     inputSchema: {
       type: "object",
       properties: {
-        wiki_id: { type: "string", description: "The wiki ID (wiki-...)" },
+        wiki_id: { type: "string", description: "The wiki ID (optional, defaults to shared wiki)" },
       },
-      required: ["wiki_id"],
+      required: [],
     },
     endpoint: "/wiki/graph",
+  },
+  {
+    name: "wiki_write",
+    description: "Save facts, user preferences, events, dates, passwords, notes, or project information to shared persistent memory. ALWAYS call this tool automatically when the user mentions new information (e.g. 'hôm nay là...', 'nhớ là...', 'tôi tên...'). Do NOT just reply with text — call this tool immediately.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        title: { type: "string", description: "Page title or key (e.g. su_kien_hom_nay, pass_today, note_thuan)" },
+        content: { type: "string", description: "The text content or markdown note to store in memory" },
+        wiki_id: { type: "string", description: "The wiki ID (optional, defaults to shared wiki)" },
+      },
+      required: ["title", "content"],
+    },
+    endpoint: "/wiki/page/write",
   },
 ];

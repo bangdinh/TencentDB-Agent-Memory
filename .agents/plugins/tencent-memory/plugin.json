@@ -1,0 +1,4 @@
+{
+  "name": "tencent-memory",
+  "description": "Shared memory system for AI agents via TencentDB Agent Memory"
+}

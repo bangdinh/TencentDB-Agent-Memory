@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "tencent-memory": {
+      "command": "cmd.exe",
+      "args": [
+        "/c",
+        "d:\\lehuynhthuan\\TencentDB-Agent-Memory\\start-mcp.bat"
+      ]
+    }
+  }
+}

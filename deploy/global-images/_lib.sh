@@ -4,6 +4,10 @@
 
 set -euo pipefail
 
+# Windows Git Bash / MSYS: prevent path conversion for docker mounts like -v /data/...
+export MSYS_NO_PATHCONV=1
+mkdir -p /tmp 2>/dev/null || true
+
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ENV_FILE="${ENV_FILE:-$SCRIPT_DIR/.env}"
 
