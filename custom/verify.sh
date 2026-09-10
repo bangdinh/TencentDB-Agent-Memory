@@ -64,12 +64,19 @@ else
 fi
 if [[ ! -d "$CUSTOM_DIR/mcp-shared-memory/node_modules" ]]; then
   bad "chưa cài dependency — (cd custom/mcp-shared-memory && npm install)"
-elif node "$CUSTOM_DIR/mcp-shared-memory/test/smoke.mjs" >/tmp/smoke.$$ 2>&1; then
-  ok "smoke test MCP server pass (13 tool, stdout sạch JSON-RPC)"
-  rm -f /tmp/smoke.$$
 else
-  bad "smoke test MCP server FAIL:"
-  sed 's/^/     /' /tmp/smoke.$$; rm -f /tmp/smoke.$$
+  run_test() {  # run_test <file> <mô tả>
+    local out; out="$(mktemp)"
+    if node "$CUSTOM_DIR/mcp-shared-memory/test/$1" >"$out" 2>&1; then
+      ok "$2"
+    else
+      bad "$2 — FAIL:"; sed 's/^/     /' "$out"
+    fi
+    rm -f "$out"
+  }
+  run_test smoke.mjs         "smoke test (13 tool, stdout sạch JSON-RPC)"
+  run_test project-mode.mjs  "chế độ project (project id → wiki riêng, cache 1 lần)"
+  run_test project-retry.mjs "đường lỗi chế độ project (API chết vẫn lên, retry được)"
 fi
 
 # ─── 2. Không có secret trong file được git theo dõi ──────────────────

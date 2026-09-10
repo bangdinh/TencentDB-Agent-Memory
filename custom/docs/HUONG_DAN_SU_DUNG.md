@@ -163,7 +163,66 @@ icon ở khay hệ thống) rồi mở lại. Biểu tượng 🔨 sẽ hiện c
 
 ---
 
-## 6. Cơ chế: bộ nhớ tự động, không cần ra lệnh
+## 6. Tách bộ nhớ theo project (multi-tenant)
+
+Mặc định mọi project dùng chung một wiki. Muốn mỗi project một vùng nhớ riêng
+trên **cùng một stack**:
+
+```bash
+bash custom/new-project.sh <project-id> /đường/dẫn/tới/project
+```
+
+Lệnh ghi `.vscode/mcp.json`, `.agents/mcp_config.json`, `.cursor/mcp.json` vào
+project đó (không ghi đè file có sẵn — nếu đã có nó in ra khối cần thêm tay),
+và in luôn lệnh `claude mcp add` cho Claude Code.
+
+Điểm mấu chốt: chỉ `KNOWLEDGE_PROJECT_ID` là khai riêng cho từng project, còn
+token / API URL / team id vẫn dùng chung từ `custom/env/local.env`.
+
+```json
+{
+  "servers": {
+    "tencent-memory": {
+      "type": "stdio",
+      "command": "bash",
+      "args": ["/ĐƯỜNG_DẪN_REPO/custom/scripts/start-mcp.sh"],
+      "env": { "KNOWLEDGE_PROJECT_ID": "cueos" }
+    }
+  }
+}
+```
+
+**Cách hoạt động**
+
+Lần đầu agent gọi một tool `wiki_*`, server gọi `/wiki/create` với
+`name = <project id>`. Endpoint này idempotent theo `(service_id, team_id, name)`
+nên đã có thì trả về wiki cũ, chưa có thì tạo — bạn không phải tạo tay. Wiki id
+phân giải được sẽ cache cho tới khi tắt tiến trình.
+
+**Thứ tự ưu tiên khi chọn wiki**
+
+1. `wiki_id` agent truyền thẳng vào tool
+2. Wiki của `KNOWLEDGE_PROJECT_ID` (nếu có)
+3. `KNOWLEDGE_WIKI_ID`
+
+Có `KNOWLEDGE_PROJECT_ID` thì `KNOWLEDGE_WIKI_ID` bị bỏ qua hoàn toàn.
+
+**Khi stack đang tắt**
+
+Việc phân giải là *lười*, không chạy lúc khởi động — nên MCP server vẫn lên bình
+thường dù Docker chưa bật, agent không báo "server failed to start". Tool sẽ trả
+lỗi nói rõ nguyên nhân, và bật stack lên gọi lại là chạy (thất bại không bị cache).
+
+**Cách ly mạnh hơn**
+
+Wiki riêng đã tách hoàn toàn nội dung: mỗi wiki là một thư mục `.md` + `index.db`
+riêng. Muốn tách cả ở tầng liệt kê (project này không thấy wiki của project kia
+khi gọi `/wiki/list`) thì cho project dùng `KNOWLEDGE_TEAM_ID` riêng — thêm biến
+đó vào cùng khối `env`. Trục tenancy của hệ thống là `(service_id, team_id)`.
+
+---
+
+## 7. Cơ chế: bộ nhớ tự động, không cần ra lệnh
 
 Bạn **không cần** nói *"lưu vào bộ nhớ"* hay *"tìm trong bộ nhớ"*. Rule trong
 `custom/agents-config/` dạy agent tự làm:
@@ -181,7 +240,7 @@ Bạn **không cần** nói *"lưu vào bộ nhớ"* hay *"tìm trong bộ nhớ
 
 ---
 
-## 7. Danh sách 13 tool MCP
+## 8. Danh sách 13 tool MCP
 
 **Wiki (5)**
 
@@ -210,7 +269,7 @@ Nhóm `wiki_*` không cần truyền `wiki_id`; nhóm `code_*` giữ nguyên sch
 
 ---
 
-## 8. Dữ liệu lưu ở đâu, dùng DB gì
+## 9. Dữ liệu lưu ở đâu, dùng DB gì
 
 **Mặc định không có DB server riêng.** Toàn bộ là SQLite + file trên đĩa, nằm
 trong Docker named volume — nên gỡ container không mất dữ liệu, nhưng
@@ -266,7 +325,7 @@ Nhớ `stop.sh` trước khi backup, tránh chép trúng lúc SQLite đang ghi.
 
 ---
 
-## 9. Xử lý lỗi
+## 10. Xử lý lỗi
 
 **Docker không khởi động**
 Bật Docker Desktop trước khi chạy `start.sh`. Kiểm tra xung đột cổng

@@ -16,22 +16,27 @@ import {
 
 import { buildTools, type McpToolDef } from "./tools.ts";
 import { callApi } from "./http.ts";
-import { loadConfig, type Config } from "./config.ts";
+import { loadConfig, describeMode, type Config } from "./config.ts";
+import { resolveDefaultWikiId } from "./wiki-resolver.ts";
 import { log } from "./log.ts";
 
 /**
  * Dựng request body cho một tool call.
  * - tool wiki_* : tự điền wiki_id mặc định nếu agent không truyền
  * - wiki_write  : gộp {title, content} thành shape {team_id, wiki_id, pages[]} mà API yêu cầu
+ *
+ * `defaultWikiId` được truyền vào (đã phân giải) chứ không đọc từ cfg, vì ở chế
+ * độ project nó chỉ biết được sau một lượt gọi API.
  */
 export function buildBody(
   cfg: Config,
   name: string,
   args: Record<string, unknown>,
+  defaultWikiId: string | undefined,
 ): Record<string, unknown> {
   if (name === "wiki_write") {
-    const wikiId = (args.wiki_id as string) || cfg.defaultWikiId;
-    if (!wikiId) throw new Error("Thiếu wiki_id: truyền vào tham số hoặc đặt KNOWLEDGE_WIKI_ID");
+    const wikiId = (args.wiki_id as string) || defaultWikiId;
+    if (!wikiId) throw new Error("Thiếu wiki_id: truyền vào tham số, hoặc đặt KNOWLEDGE_PROJECT_ID / KNOWLEDGE_WIKI_ID");
     if (!cfg.defaultTeamId && !args.team_id) throw new Error("Thiếu team_id: đặt KNOWLEDGE_TEAM_ID");
     return {
       team_id: (args.team_id as string) || cfg.defaultTeamId,
@@ -46,8 +51,8 @@ export function buildBody(
   }
 
   const body = { ...args };
-  if (name.startsWith("wiki_") && !body.wiki_id && cfg.defaultWikiId) {
-    body.wiki_id = cfg.defaultWikiId;
+  if (name.startsWith("wiki_") && !body.wiki_id && defaultWikiId) {
+    body.wiki_id = defaultWikiId;
   }
   return body;
 }
@@ -78,7 +83,10 @@ export function createServer(cfg: Config): Server {
     }
 
     try {
-      const body = buildBody(cfg, name, (args ?? {}) as Record<string, unknown>);
+      // Chỉ phân giải wiki khi tool thật sự cần — tool code_* không đụng tới wiki.
+      const needsWiki = name.startsWith("wiki_");
+      const defaultWikiId = needsWiki ? await resolveDefaultWikiId(cfg) : undefined;
+      const body = buildBody(cfg, name, (args ?? {}) as Record<string, unknown>, defaultWikiId);
       const data = await callApi(cfg, tool.endpoint, body);
 
       // code-graph trả sẵn {text, isError} — đẩy thẳng ra
@@ -101,12 +109,15 @@ export function createServer(cfg: Config): Server {
 async function main() {
   const cfg = loadConfig();
   log.info(`khởi động, API=${cfg.baseUrl} service=${cfg.serviceId}`, {
-    wiki: cfg.defaultWikiId ?? "(chưa đặt)",
+    mode: describeMode(cfg),
     team: cfg.defaultTeamId ?? "(chưa đặt)",
     auth: cfg.token ? "có token" : "không token",
   });
-  if (!cfg.defaultWikiId) {
-    log.warn("chưa đặt KNOWLEDGE_WIKI_ID — agent sẽ phải tự truyền wiki_id ở mỗi lần gọi");
+  if (cfg.projectId && !cfg.defaultTeamId) {
+    log.warn("có KNOWLEDGE_PROJECT_ID nhưng thiếu KNOWLEDGE_TEAM_ID — tool wiki_* sẽ báo lỗi");
+  }
+  if (!cfg.projectId && !cfg.defaultWikiId) {
+    log.warn("chưa đặt KNOWLEDGE_PROJECT_ID lẫn KNOWLEDGE_WIKI_ID — agent phải tự truyền wiki_id mỗi lần gọi");
   }
 
   const server = createServer(cfg);

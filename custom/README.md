@@ -35,6 +35,7 @@ Trên Windows dùng `custom\install.bat`.
 | `patches/` | Diff của những chỗ **buộc phải sửa trực tiếp** trên code upstream |
 | `install.sh` / `install.bat` | Sinh cấu hình agent ra gốc repo |
 | `set-token.sh` | Đổi `KNOWLEDGE_API_TOKEN` (nhập kín, không lộ ra history/log) |
+| `new-project.sh` | Sinh MCP config cho một project ở chế độ bộ nhớ riêng |
 | `sync-upstream.sh` | Kéo tính năng mới từ upstream |
 | `verify.sh` | Kiểm tra customize còn nguyên sau merge |
 | `refresh-patches.sh` | Sinh lại `patches/*.patch` từ cây làm việc |
@@ -71,6 +72,40 @@ vân tay, không nhúng token đã lộ vào file nào cả.
 
 MCP server đọc lại `local.env` mỗi lần khởi động, nên đổi token xong chỉ cần
 restart agent / VS Code, không phải build lại gì.
+
+## Tách bộ nhớ theo project (multi-tenant)
+
+Mặc định mọi agent dùng chung một wiki (`KNOWLEDGE_WIKI_ID`). Muốn mỗi project
+một vùng nhớ riêng trên cùng một stack:
+
+```bash
+bash custom/new-project.sh cueos /đường/dẫn/tới/project
+```
+
+Lệnh này ghi `.vscode/mcp.json`, `.agents/mcp_config.json`, `.cursor/mcp.json`
+vào project đó, mỗi file khai:
+
+```json
+"env": { "KNOWLEDGE_PROJECT_ID": "cueos" }
+```
+
+Cơ chế:
+
+- **Token, API URL, team id vẫn dùng chung** từ `custom/env/local.env`. Chỉ
+  `KNOWLEDGE_PROJECT_ID` là riêng. `start-mcp.sh` coi `local.env` là *giá trị mặc
+  định* — biến nào agent đã truyền qua `env` thì giữ nguyên.
+- Lần gọi tool `wiki_*` đầu tiên, server gọi `/wiki/create` với
+  `name = <project id>`. Endpoint này **idempotent theo `(service_id, team_id,
+  name)`** nên đã có thì trả về đúng wiki cũ, chưa có thì tạo. Không phải tạo tay.
+- Kết quả được cache trong vòng đời tiến trình → chỉ một lượt gọi thêm.
+- Có `KNOWLEDGE_PROJECT_ID` thì `KNOWLEDGE_WIKI_ID` bị bỏ qua. Agent truyền
+  `wiki_id` tường minh vào tool thì vẫn được ưu tiên cao nhất.
+- Phân giải là **lười**, không phải lúc khởi động: stack tắt thì MCP server vẫn
+  lên bình thường, tool báo lỗi rõ ràng, và bật stack lên gọi lại là chạy —
+  thất bại không bị cache.
+
+Muốn project dùng hẳn team khác (cách ly mạnh hơn, tách cả ở tầng
+`/wiki/list`) thì thêm `KNOWLEDGE_TEAM_ID` vào cùng khối `env` đó.
 
 ## Kéo tính năng mới từ upstream
 

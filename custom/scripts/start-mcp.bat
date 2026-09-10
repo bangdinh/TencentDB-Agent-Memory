@@ -16,9 +16,10 @@ if not exist "%PKG_DIR%\node_modules" (
     exit /b 1
 )
 
-REM eol=# lam cmd bo qua cac dong comment trong local.env
+REM local.env chi la GIA TRI MAC DINH: bien nao agent da truyen qua "env" trong
+REM MCP config thi giu nguyen (if not defined). eol=# de bo qua dong comment.
 for /f "usebackq eol=# tokens=1,* delims==" %%a in ("%ENV_FILE%") do (
-    if not "%%a"=="" set "%%a=%%b"
+    if not "%%a"=="" if not defined %%a set "%%a=%%b"
 )
 
 cd /d "%PKG_DIR%"

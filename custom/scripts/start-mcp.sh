@@ -16,10 +16,17 @@ if [[ ! -d "$PKG_DIR/node_modules" ]]; then
   exit 1
 fi
 
-set -a
-# shellcheck disable=SC1090
-source "$ENV_FILE"
-set +a
+# local.env chỉ là GIÁ TRỊ MẶC ĐỊNH: biến nào agent đã truyền qua `env` trong MCP
+# config thì giữ nguyên. Nhờ vậy mỗi project khai được KNOWLEDGE_PROJECT_ID riêng
+# mà vẫn dùng chung token/URL trong local.env.
+while IFS='=' read -r key val || [[ -n "${key:-}" ]]; do
+  [[ -z "$key" || "$key" == \#* ]] && continue
+  key="${key%"${key##*[![:space:]]}"}"   # bỏ khoảng trắng cuối tên biến
+  [[ -z "$key" ]] && continue
+  if [[ -z "${!key:-}" ]]; then
+    export "$key=$val"
+  fi
+done < "$ENV_FILE"
 
 cd "$PKG_DIR"
 exec node node_modules/tsx/dist/cli.mjs src/server.ts
