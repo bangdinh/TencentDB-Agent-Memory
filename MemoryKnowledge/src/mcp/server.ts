@@ -59,13 +59,13 @@ export function createMcpServer(httpOpts: HttpClientOptions): Server {
     }
 
     let body = (args ?? {}) as Record<string, unknown>;
-    const defaultWikiId = (process.env.KNOWLEDGE_WIKI_ID as string) || "wiki-9sr5qg3i";
-    if (name.startsWith("wiki_") && !body.wiki_id) {
+    const defaultWikiId = process.env.KNOWLEDGE_WIKI_ID;
+    if (name.startsWith("wiki_") && !body.wiki_id && defaultWikiId) {
       body.wiki_id = defaultWikiId;
     }
     if (name === "wiki_write") {
       body = {
-        team_id: (body.team_id as string) || process.env.KNOWLEDGE_TEAM_ID || "team-lgjymhjjpp",
+        team_id: (body.team_id as string) || process.env.KNOWLEDGE_TEAM_ID,
         wiki_id: (body.wiki_id as string) || defaultWikiId,
         pages: [
           {

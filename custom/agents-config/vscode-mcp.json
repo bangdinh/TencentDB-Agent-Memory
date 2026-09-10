@@ -1,0 +1,9 @@
+{
+  "servers": {
+    "tencent-memory": {
+      "type": "stdio",
+      "command": "__MCP_COMMAND__",
+      "args": __MCP_ARGS__
+    }
+  }
+}

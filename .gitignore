@@ -139,3 +139,16 @@ MemoryCore/scripts/bench-l0-mongo/reports/
 # Local-only: parity snapshots & runtime configs (never commit)
 MemoryProxy/.archive-tmp/
 z_config/
+
+# ─── Fork customization (xem custom/README.md) ────────────────────────
+# Secret local — KHÔNG BAO GIỜ commit
+/custom/env/local.env
+# Các file dưới đây do custom/install.sh sinh ra.
+# Nguồn sự thật nằm ở custom/agents-config/ — sửa ở đó, rồi chạy lại install.
+/.agents/
+/.clinerules
+/.cursorrules
+/.vscode/mcp.json
+/.github/copilot-instructions.md
+/AGENTS.md
+/CLAUDE.md
