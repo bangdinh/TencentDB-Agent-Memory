@@ -34,6 +34,7 @@ Trên Windows dùng `custom\install.bat`.
 | `mcp-shared-memory/` | **MCP server riêng** — thay cho việc patch `MemoryKnowledge/src/mcp/` |
 | `patches/` | Diff của những chỗ **buộc phải sửa trực tiếp** trên code upstream |
 | `install.sh` / `install.bat` | Sinh cấu hình agent ra gốc repo |
+| `set-token.sh` | Đổi `KNOWLEDGE_API_TOKEN` (nhập kín, không lộ ra history/log) |
 | `sync-upstream.sh` | Kéo tính năng mới từ upstream |
 | `verify.sh` | Kiểm tra customize còn nguyên sau merge |
 | `refresh-patches.sh` | Sinh lại `patches/*.patch` từ cây làm việc |
@@ -52,6 +53,24 @@ Lý do phải sinh ra chứ không symlink: Git trên Windows mặc định khô
 thật, nên symlink sẽ biến thành file text vô nghĩa khi clone trên máy Windows.
 Việc sinh file cũng thay luôn đường dẫn tuyệt đối của MCP server theo từng máy —
 trước đây chỗ này hardcode `d:\lehuynhthuan\TencentDB-Agent-Memory\`.
+
+## Đổi token
+
+```bash
+bash custom/set-token.sh
+```
+
+Token nhập kín — không hiện trên màn hình, không vào shell history, không đi qua
+`sed`/`awk` nên cũng không lộ trong `ps`. Script chỉ sửa đúng dòng
+`KNOWLEDGE_API_TOKEN`, giữ nguyên các biến khác, đặt quyền file về `600`, rồi in
+dấu vân tay sha256 8 ký tự để bạn đối chiếu với token trong MemoryCore.
+
+`verify.sh` có một chốt riêng cho việc này: nếu `local.env` vẫn đang dùng token
+từng bị commit lên repo public (commit `29c8534`), nó báo đỏ. So sánh bằng dấu
+vân tay, không nhúng token đã lộ vào file nào cả.
+
+MCP server đọc lại `local.env` mỗi lần khởi động, nên đổi token xong chỉ cần
+restart agent / VS Code, không phải build lại gì.
 
 ## Kéo tính năng mới từ upstream
 

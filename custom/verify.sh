@@ -85,6 +85,19 @@ if git check-ignore -q custom/env/local.env; then
 else
   bad "custom/env/local.env KHÔNG được gitignore"
 fi
+# So bằng dấu vân tay chứ không nhúng token đã lộ vào file này.
+LEAKED_TOKEN_FP="ae6425817aa3467c"
+if [[ -f "$CUSTOM_DIR/env/local.env" ]]; then
+  cur="$(grep -m1 '^KNOWLEDGE_API_TOKEN=' "$CUSTOM_DIR/env/local.env" | cut -d= -f2-)"
+  if [[ -n "$cur" ]] && [[ "$(printf '%s' "$cur" | shasum -a 256 | cut -c1-16)" == "$LEAKED_TOKEN_FP" ]]; then
+    bad "local.env VẪN dùng token đã lộ lên repo public — chạy: bash custom/set-token.sh"
+  else
+    ok "local.env không còn dùng token đã lộ"
+  fi
+  perm="$(stat -f '%Lp' "$CUSTOM_DIR/env/local.env" 2>/dev/null || stat -c '%a' "$CUSTOM_DIR/env/local.env" 2>/dev/null)"
+  if [[ "$perm" == "600" ]]; then ok "local.env quyền 600"
+  else bad "local.env quyền $perm — nên là 600: chmod 600 custom/env/local.env"; fi
+fi
 
 # ─── 3. File sinh ra ở gốc repo có khớp custom/agents-config không ────
 echo "3. Cấu hình agent ở gốc repo"
