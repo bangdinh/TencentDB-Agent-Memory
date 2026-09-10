@@ -4,9 +4,11 @@
 
 set -euo pipefail
 
-# Windows Git Bash / MSYS: prevent path conversion for docker mounts like -v /data/...
+# Git Bash / MSYS on Windows rewrites arguments that look like POSIX paths, so
+# `docker run -v /data/...` turns into `-v C:/Program Files/Git/data/...` and the
+# mount silently points at the wrong place. Opt out for every script that sources
+# this library. No-op on Linux/macOS.
 export MSYS_NO_PATHCONV=1
-mkdir -p /tmp 2>/dev/null || true
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ENV_FILE="${ENV_FILE:-$SCRIPT_DIR/.env}"

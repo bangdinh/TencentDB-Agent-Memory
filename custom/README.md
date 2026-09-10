@@ -103,16 +103,25 @@ ngày, cần version giống hệt nhau trên mọi máy. Cài bằng `npm ci` c
 
 ## Chỗ duy nhất còn phải sửa trực tiếp upstream
 
-`002-deploy-windows-compat.patch` — `deploy/global-images/`: `MSYS_NO_PATHCONV=1`
-cho Git Bash, dùng `curl` trong PATH thay vì hardcode `/usr/bin/curl`, gọi
-`127.0.0.1` thay `localhost` (tránh IPv6 `::1`). Không tách ra folder riêng được
-vì đây là shell script deploy của upstream. `verify.sh` kiểm tra chúng còn nguyên;
-mất thì khôi phục bằng `git apply custom/patches/002-deploy-windows-compat.patch`.
+`002-deploy-windows-compat.patch` — `deploy/global-images/`, cho Windows/Git Bash:
 
-Mấy fix này có ích cho mọi người dùng Windows — đáng gửi PR ngược lên upstream
-để khỏi phải maintain.
+- `_lib.sh`: `export MSYS_NO_PATHCONV=1` (MSYS viết lại `-v /data/...` thành
+  `-v C:/Program Files/Git/data/...`, mount trỏ sai chỗ mà không báo lỗi)
+- `start-memory-core.sh`: dùng `$CURL` mà `_lib.sh` đã resolve, thay vì gọi thẳng
+  `/usr/bin/curl` — Git Bash để curl ở `/mingw64/bin/curl`
+- `verify.sh`: bỏ dòng gán đè `CURL=`, vì nó ghi đè đúng cái fallback vừa được
+  `_lib.sh` tính ra
+- `start-memory-core.sh`: hai lời gọi loopback đổi `localhost` → `127.0.0.1`
+  (Windows resolve `localhost` ra `::1` trước, còn Docker chỉ publish IPv4)
 
-> Lưu ý: upstream mới thêm `deploy/global-images/_lib.sh` dòng
-> `CURL="${CURL:-/usr/bin/curl}"`. Trên macOS không sao; trên Git Bash thì
-> `/usr/bin/curl` không tồn tại, nhưng vì có `${CURL:-}` nên chỉ cần
-> `export CURL=$(command -v curl)` là chạy được.
+Không tách ra folder riêng được vì đây là shell script deploy của upstream.
+`verify.sh` kiểm tra chúng còn nguyên (cả check dương lẫn check âm); mất thì
+khôi phục bằng `git apply custom/patches/002-deploy-windows-compat.patch`.
+
+**Nội dung này khớp hệt bản đã gửi upstream ở
+[PR #1330](https://github.com/TencentCloud/TencentDB-Agent-Memory/pull/1330)**
+(base `feat/server_team`). Nếu PR được merge, `refresh-patches.sh` sẽ tự sinh ra
+file rỗng và xoá `patches/002` — lúc đó fork hết chỗ phải patch upstream.
+
+PR mở được là nhờ fork thật `bangdinh/TencentDB-Agent-Memory` (remote `fork`);
+`bangdinh/agents-memory` không phải GitHub fork nên không mở PR chéo được.

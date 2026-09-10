@@ -25,22 +25,35 @@ else
   git diff --stat "$UPSTREAM_REF" -- MemoryKnowledge/ | sed 's/^/     /'
 fi
 
-# ─── 1b. Patch buộc phải giữ trên file upstream ───────────────────────
-echo "1b. Patch trên deploy/ (chưa tách ra được)"
-while IFS='|' read -r file marker desc; do
-  [[ -z "${file:-}" ]] && continue
-  if [[ ! -f "$file" ]]; then
-    bad "$desc — thiếu file $file"
-  elif grep -qF -- "$marker" "$file"; then
-    ok "$desc"
-  else
-    bad "$desc — mất trong $file"
-  fi
-done <<'PATCHES'
-deploy/global-images/_lib.sh|MSYS_NO_PATHCONV|Git Bash không đổi path khi mount docker
-deploy/global-images/verify.sh|command -v curl|dùng curl trong PATH
-deploy/global-images/start-memory-core.sh|127.0.0.1|gọi 127.0.0.1 thay vì localhost
-PATCHES
+# ─── 1b. Patch buộc phải giữ trên deploy/ ─────────────────────────────
+# Khớp hệt nội dung đã gửi upstream ở PR #1330. Nếu PR được merge thì mấy
+# check này vẫn xanh và patches/002 sẽ tự rỗng đi ở lần refresh-patches kế.
+echo "1b. Patch Windows/Git Bash trên deploy/ (= PR #1330)"
+
+has() {  # has <file> <chuỗi> <mô tả>
+  if [[ ! -f "$1" ]]; then bad "$3 — thiếu file $1"
+  elif grep -qF -- "$2" "$1"; then ok "$3"
+  else bad "$3 — mất trong $1"; fi
+}
+hasnt() {  # hasnt <file> <regex> <mô tả>
+  if [[ ! -f "$1" ]]; then bad "$3 — thiếu file $1"
+  elif grep -qE -- "$2" "$1"; then bad "$3 — vẫn còn trong $1"
+  else ok "$3"; fi
+}
+
+has   deploy/global-images/_lib.sh "export MSYS_NO_PATHCONV=1" \
+      "_lib.sh: tắt path conversion của Git Bash"
+has   deploy/global-images/start-memory-core.sh 'code=$("$CURL" -sS' \
+      "start-memory-core.sh: verify_user_key dùng \$CURL"
+has   deploy/global-images/start-memory-core.sh 'init_resp=$("$CURL" -sS' \
+      "start-memory-core.sh: init-admin dùng \$CURL"
+hasnt deploy/global-images/start-memory-core.sh '\$\(/usr/bin/curl' \
+      "start-memory-core.sh: không còn hardcode /usr/bin/curl"
+has   deploy/global-images/start-memory-core.sh "127.0.0.1" \
+      "start-memory-core.sh: gọi 127.0.0.1 thay localhost (Windows resolve ::1)"
+# Dòng gán đè phải biến mất để fallback trong _lib.sh còn tác dụng.
+hasnt deploy/global-images/verify.sh '^CURL=' \
+      "verify.sh: không đè lên \$CURL mà _lib.sh đã resolve"
 
 # ─── 1c. MCP server riêng ─────────────────────────────────────────────
 echo "1c. custom/mcp-shared-memory"
