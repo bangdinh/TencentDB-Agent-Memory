@@ -23,6 +23,9 @@ gen() {  # gen <tên file patch> <path...>
 }
 
 echo "Sinh patch so với $UPSTREAM_REF"
-gen 001-memoryknowledge-mcp.patch MemoryKnowledge/src/logger.ts MemoryKnowledge/src/mcp/
+# MemoryKnowledge KHÔNG còn patch nào — toàn bộ đã chuyển sang
+# custom/mcp-shared-memory/. Dòng dưới là chốt chặn: nếu có ai lỡ sửa lại
+# vào đó thì patch sẽ được sinh ra và verify.sh sẽ báo.
+gen 001-memoryknowledge-KHONG-DUOC-CO.patch MemoryKnowledge/
 gen 002-deploy-windows-compat.patch deploy/global-images/
 echo "✅ Xong."

@@ -34,10 +34,7 @@ export async function callApi(
   body: Record<string, unknown>,
 ): Promise<unknown> {
   const url = `${opts.baseUrl.replace(/\/$/, "")}/v3${endpoint}`;
-  const headers: Record<string, string> = { 
-    "Content-Type": "application/json",
-    "x-tdai-service-id": process.env.KNOWLEDGE_SERVICE_ID || "default"
-  };
+  const headers: Record<string, string> = { "Content-Type": "application/json" };
   if (opts.token) headers["Authorization"] = `Bearer ${opts.token}`;
 
   log.debug(`POST ${url}`);

@@ -55,5 +55,11 @@ if [[ ! -f "$CUSTOM_DIR/env/local.env" ]]; then
   echo "    rồi điền KNOWLEDGE_API_TOKEN / TEAM_ID / WIKI_ID."
 fi
 
+if [[ ! -d "$CUSTOM_DIR/mcp-shared-memory/node_modules" ]]; then
+  echo
+  echo "⚠️  MCP server chưa cài dependency."
+  echo "    (cd custom/mcp-shared-memory && npm install)"
+fi
+
 echo
 echo "✅ Xong."

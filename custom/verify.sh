@@ -11,9 +11,22 @@ FAIL=0
 ok()   { echo "  ✅ $1"; }
 bad()  { echo "  ❌ $1"; FAIL=1; }
 
-# ─── 1. Patch trên file upstream ──────────────────────────────────────
-# Mỗi dòng: <file>|<chuỗi phải tồn tại>|<mô tả>
-echo "1. Patch trên file upstream"
+# ─── 1. MemoryKnowledge phải sạch 100% ────────────────────────────────
+# Toàn bộ customize MCP đã chuyển sang custom/mcp-shared-memory/.
+# Sửa trực tiếp vào MemoryKnowledge là đi lùi — chặn ngay tại đây.
+echo "1. MemoryKnowledge giữ nguyên bản upstream"
+UPSTREAM_REF="${UPSTREAM_REF:-upstream/feat/server_team}"
+if ! git rev-parse --verify -q "$UPSTREAM_REF" >/dev/null; then
+  echo "  ⏭  bỏ qua (chưa có $UPSTREAM_REF — chạy: git fetch upstream)"
+elif [[ -z "$(git diff "$UPSTREAM_REF" -- MemoryKnowledge/)" ]]; then
+  ok "MemoryKnowledge khớp $UPSTREAM_REF"
+else
+  bad "MemoryKnowledge đã bị sửa — customize phải nằm ở custom/mcp-shared-memory/:"
+  git diff --stat "$UPSTREAM_REF" -- MemoryKnowledge/ | sed 's/^/     /'
+fi
+
+# ─── 1b. Patch buộc phải giữ trên file upstream ───────────────────────
+echo "1b. Patch trên deploy/ (chưa tách ra được)"
 while IFS='|' read -r file marker desc; do
   [[ -z "${file:-}" ]] && continue
   if [[ ! -f "$file" ]]; then
@@ -24,16 +37,22 @@ while IFS='|' read -r file marker desc; do
     bad "$desc — mất trong $file"
   fi
 done <<'PATCHES'
-MemoryKnowledge/src/logger.ts|shouldLog("info")) console.error|logger ghi ra stderr (stdout phải sạch cho MCP stdio)
-MemoryKnowledge/src/mcp/http-client.ts|x-tdai-service-id|header x-tdai-service-id
-MemoryKnowledge/src/mcp/server.ts|const defaultWikiId = process.env.KNOWLEDGE_WIKI_ID|inject wiki_id mặc định từ env
-MemoryKnowledge/src/mcp/server.ts|const isMain|phát hiện entrypoint chuẩn trên Windows
-MemoryKnowledge/src/mcp/tools.ts|name: "wiki_write"|tool wiki_write
-MemoryKnowledge/src/mcp/tools.ts|required: ["query"]|wiki_search không bắt buộc wiki_id
 deploy/global-images/_lib.sh|MSYS_NO_PATHCONV|Git Bash không đổi path khi mount docker
 deploy/global-images/verify.sh|command -v curl|dùng curl trong PATH
 deploy/global-images/start-memory-core.sh|127.0.0.1|gọi 127.0.0.1 thay vì localhost
 PATCHES
+
+# ─── 1c. MCP server riêng ─────────────────────────────────────────────
+echo "1c. custom/mcp-shared-memory"
+if [[ ! -d "$CUSTOM_DIR/mcp-shared-memory/node_modules" ]]; then
+  bad "chưa cài dependency — (cd custom/mcp-shared-memory && npm install)"
+elif node "$CUSTOM_DIR/mcp-shared-memory/test/smoke.mjs" >/tmp/smoke.$$ 2>&1; then
+  ok "smoke test MCP server pass (13 tool, stdout sạch JSON-RPC)"
+  rm -f /tmp/smoke.$$
+else
+  bad "smoke test MCP server FAIL:"
+  sed 's/^/     /' /tmp/smoke.$$; rm -f /tmp/smoke.$$
+fi
 
 # ─── 2. Không có secret trong file được git theo dõi ──────────────────
 echo "2. Rò rỉ secret"
