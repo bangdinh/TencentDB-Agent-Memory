@@ -35,11 +35,19 @@ if [[ "$n" -eq 0 ]]; then echo "  (đã mới nhất)"; exit 0; fi
 
 echo
 echo "── Thử merge (dry-run) ──"
-if out=$(git merge-tree --write-tree --name-only HEAD "$UPSTREAM_REF" 2>&1) && [[ $(echo "$out" | wc -l) -eq 1 ]]; then
-  echo "  ✅ Không conflict."
-else
-  echo "  ⚠️  Sẽ conflict ở:"; echo "$out" | tail -n +2 | sed 's/^/     /'
-fi
+set +e
+out=$(git merge-tree --write-tree --name-only HEAD "$UPSTREAM_REF" 2>&1); rc=$?
+set -e
+case "$rc" in
+  0) echo "  ✅ Không conflict." ;;
+  1) echo "  ⚠️  Sẽ conflict ở các file:"
+     # dòng 1 là OID của tree; danh sách file nằm tới dòng trống đầu tiên
+     echo "$out" | tail -n +2 | sed -n '/^$/q;p' | sed 's/^/     /' ;;
+  *) echo "  ❌ Không merge được với $UPSTREAM_REF:" >&2
+     echo "$out" | sed 's/^/     /' >&2
+     echo "     (nhánh này có lineage khác — fork bám feat/server_team)" >&2
+     exit 1 ;;
+esac
 
 if [[ "$DO_MERGE" -eq 0 ]]; then
   echo
