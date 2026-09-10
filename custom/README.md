@@ -4,6 +4,9 @@ Fork của [TencentCloud/TencentDB-Agent-Memory](https://github.com/TencentCloud
 Mục tiêu của thư mục này: **mọi thứ là của mình đều nằm ở đây**, để merge upstream
 không đụng độ và để nhìn một chỗ là biết đã sửa gì.
 
+> **Remote**: `origin` = `bangdinh/TencentDB-Agent-Memory` (fork thật của upstream,
+> nhánh làm việc là `main`), `upstream` = `TencentCloud/TencentDB-Agent-Memory`.
+>
 > ⚠️ Fork bám nhánh **`feat/server_team`** (dòng v2.x: MemoryCore / MemoryKnowledge /
 > MemoryPanel / MemoryProxy). `upstream/main` là lineage **khác hoàn toàn**
 > (v0.x–v1.x, `memory-tencentdb` / Hermes) — merge vào sẽ báo *no merge base* và hỏng repo.
@@ -123,5 +126,7 @@ khôi phục bằng `git apply custom/patches/002-deploy-windows-compat.patch`.
 (base `feat/server_team`). Nếu PR được merge, `refresh-patches.sh` sẽ tự sinh ra
 file rỗng và xoá `patches/002` — lúc đó fork hết chỗ phải patch upstream.
 
-PR mở được là nhờ fork thật `bangdinh/TencentDB-Agent-Memory` (remote `fork`);
-`bangdinh/agents-memory` không phải GitHub fork nên không mở PR chéo được.
+PR mở được là nhờ đây là fork thật của upstream. Trước đó repo dùng làm `origin`
+là `bangdinh/agents-memory` — một repo độc lập chứ không phải GitHub fork
+(`isFork: false`), nên GitHub từ chối mở PR chéo. Từ 2026-09-11, `origin` trỏ vào
+`bangdinh/TencentDB-Agent-Memory` và repo cũ đã ngừng dùng.
