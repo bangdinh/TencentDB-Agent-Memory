@@ -12,7 +12,7 @@ không đụng độ và để nhìn một chỗ là biết đã sửa gì.
 
 ```bash
 cp custom/env/local.env.example custom/env/local.env   # rồi điền token thật
-(cd custom/mcp-shared-memory && npm install)            # dependency của MCP server
+(cd custom/mcp-shared-memory && npm ci)                 # dependency của MCP server
 bash custom/install.sh                                  # sinh cấu hình agent ra gốc repo
 bash custom/verify.sh                                   # kiểm tra mọi thứ đúng chỗ
 ```
@@ -95,6 +95,11 @@ Chạy test:
 ```bash
 cd custom/mcp-shared-memory && node test/smoke.mjs
 ```
+
+`package-lock.json` **có commit**, dù `.gitignore` của upstream ignore nó (họ dùng
+pnpm) — `.gitignore` có một dòng negation riêng cho nó. Lý do: server này chạy hằng
+ngày, cần version giống hệt nhau trên mọi máy. Cài bằng `npm ci` chứ đừng
+`npm install` để khỏi làm trôi lockfile.
 
 ## Chỗ duy nhất còn phải sửa trực tiếp upstream
 

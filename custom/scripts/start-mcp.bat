@@ -12,7 +12,7 @@ if not exist "%ENV_FILE%" (
     exit /b 1
 )
 if not exist "%PKG_DIR%\node_modules" (
-    echo Chua cai dependency - chay: cd custom\mcp-shared-memory ^&^& npm install 1>&2
+    echo Chua cai dependency - chay: cd custom\mcp-shared-memory ^&^& npm ci 1>&2
     exit /b 1
 )
 

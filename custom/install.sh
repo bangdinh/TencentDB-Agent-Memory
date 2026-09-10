@@ -58,7 +58,7 @@ fi
 if [[ ! -d "$CUSTOM_DIR/mcp-shared-memory/node_modules" ]]; then
   echo
   echo "⚠️  MCP server chưa cài dependency."
-  echo "    (cd custom/mcp-shared-memory && npm install)"
+  echo "    (cd custom/mcp-shared-memory && npm ci)"
 fi
 
 echo

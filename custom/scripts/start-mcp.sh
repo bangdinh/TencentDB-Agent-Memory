@@ -12,7 +12,7 @@ if [[ ! -f "$ENV_FILE" ]]; then
   exit 1
 fi
 if [[ ! -d "$PKG_DIR/node_modules" ]]; then
-  echo "Chưa cài dependency — chạy: (cd custom/mcp-shared-memory && npm install)" >&2
+  echo "Chưa cài dependency — chạy: (cd custom/mcp-shared-memory && npm ci)" >&2
   exit 1
 fi
 

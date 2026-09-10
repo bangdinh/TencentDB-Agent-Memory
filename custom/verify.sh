@@ -44,6 +44,11 @@ PATCHES
 
 # ─── 1c. MCP server riêng ─────────────────────────────────────────────
 echo "1c. custom/mcp-shared-memory"
+if git ls-files --error-unmatch custom/mcp-shared-memory/package-lock.json >/dev/null 2>&1; then
+  ok "package-lock.json được git theo dõi (pin version)"
+else
+  bad "package-lock.json KHÔNG được theo dõi — .gitignore của upstream đè mất negation?"
+fi
 if [[ ! -d "$CUSTOM_DIR/mcp-shared-memory/node_modules" ]]; then
   bad "chưa cài dependency — (cd custom/mcp-shared-memory && npm install)"
 elif node "$CUSTOM_DIR/mcp-shared-memory/test/smoke.mjs" >/tmp/smoke.$$ 2>&1; then
