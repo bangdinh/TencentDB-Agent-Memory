@@ -169,15 +169,20 @@ Mặc định mọi project dùng chung một wiki. Muốn mỗi project một v
 trên **cùng một stack**:
 
 ```bash
-bash custom/new-project.sh <project-id> /đường/dẫn/tới/project
+bash custom/new-project.sh cueos /đường/dẫn/tới/project
 ```
 
-Lệnh ghi `.vscode/mcp.json`, `.agents/mcp_config.json`, `.cursor/mcp.json` vào
-project đó (không ghi đè file có sẵn — nếu đã có nó in ra khối cần thêm tay),
-và in luôn lệnh `claude mcp add` cho Claude Code.
+Mỗi project được cấp riêng **cả team lẫn wiki**:
 
-Điểm mấu chốt: chỉ `KNOWLEDGE_PROJECT_ID` là khai riêng cho từng project, còn
-token / API URL / team id vẫn dùng chung từ `custom/env/local.env`.
+| | Giá trị mặc định | Đổi bằng |
+|---|---|---|
+| `KNOWLEDGE_PROJECT_ID` | `cueos` | tham số thứ nhất |
+| `KNOWLEDGE_TEAM_ID` | `team-cueos` | `--team <team-id>` |
+| Wiki | tên `cueos`, tự tạo lần gọi đầu | — |
+
+Lệnh ghi `.vscode/mcp.json`, `.agents/mcp_config.json`, `.cursor/mcp.json` vào
+project đó (không ghi đè file có sẵn — có rồi thì in ra khối cần thêm tay), và
+in luôn lệnh `claude mcp add`.
 
 ```json
 {
@@ -186,39 +191,63 @@ token / API URL / team id vẫn dùng chung từ `custom/env/local.env`.
       "type": "stdio",
       "command": "bash",
       "args": ["/ĐƯỜNG_DẪN_REPO/custom/scripts/start-mcp.sh"],
-      "env": { "KNOWLEDGE_PROJECT_ID": "cueos" }
+      "env": {
+        "KNOWLEDGE_PROJECT_ID": "cueos",
+        "KNOWLEDGE_TEAM_ID": "team-cueos"
+      }
     }
   }
 }
 ```
 
-**Cách hoạt động**
+Token và API URL vẫn dùng chung từ `custom/env/local.env`; chỉ hai biến trên là
+riêng cho từng project.
+
+### Cách ly sâu tới đâu
+
+`team_id` là **một cấp thư mục thật trên đĩa**:
+`data/<service_id>/<team_id>/<resource_id>/`. Nên tách team là tách hẳn cây thư
+mục: project này không đọc được nội dung, cũng không **liệt kê** được wiki của
+project kia. Nếu chỉ tách ở tầng wiki thì nội dung có riêng nhưng gọi
+`/wiki/list` trong cùng team vẫn thấy tên wiki của nhau.
+
+### Cách hoạt động
 
 Lần đầu agent gọi một tool `wiki_*`, server gọi `/wiki/create` với
-`name = <project id>`. Endpoint này idempotent theo `(service_id, team_id, name)`
-nên đã có thì trả về wiki cũ, chưa có thì tạo — bạn không phải tạo tay. Wiki id
-phân giải được sẽ cache cho tới khi tắt tiến trình.
+`name = <project id>` trong team của project. Endpoint idempotent theo
+`(service_id, team_id, name)` nên đã có thì trả wiki cũ, chưa có thì tạo — bạn
+không phải tạo tay. Wiki id phân giải được sẽ cache tới khi tắt tiến trình.
 
-**Thứ tự ưu tiên khi chọn wiki**
+Thứ tự ưu tiên chọn wiki:
 
 1. `wiki_id` agent truyền thẳng vào tool
-2. Wiki của `KNOWLEDGE_PROJECT_ID` (nếu có)
+2. Wiki của `KNOWLEDGE_PROJECT_ID`
 3. `KNOWLEDGE_WIKI_ID`
 
 Có `KNOWLEDGE_PROJECT_ID` thì `KNOWLEDGE_WIKI_ID` bị bỏ qua hoàn toàn.
 
-**Khi stack đang tắt**
+### Khi stack đang tắt
 
 Việc phân giải là *lười*, không chạy lúc khởi động — nên MCP server vẫn lên bình
-thường dù Docker chưa bật, agent không báo "server failed to start". Tool sẽ trả
-lỗi nói rõ nguyên nhân, và bật stack lên gọi lại là chạy (thất bại không bị cache).
+thường dù Docker chưa bật, agent không báo "server failed to start". Tool trả
+lỗi nói rõ nguyên nhân, và bật stack lên gọi lại là chạy (thất bại không cache).
 
-**Cách ly mạnh hơn**
+### Giới hạn: team chưa có trong MemoryCore
 
-Wiki riêng đã tách hoàn toàn nội dung: mỗi wiki là một thư mục `.md` + `index.db`
-riêng. Muốn tách cả ở tầng liệt kê (project này không thấy wiki của project kia
-khi gọi `/wiki/list`) thì cho project dùng `KNOWLEDGE_TEAM_ID` riêng — thêm biến
-đó vào cùng khối `env`. Trục tenancy của hệ thống là `(service_id, team_id)`.
+Team suy ra kiểu `team-<project-id>` **chưa được đăng ký trong MemoryCore**.
+Knowledge không kiểm tra team có tồn tại hay không — nó chỉ dùng `team_id` làm
+cấp thư mục và cột DB — nên **cách ly có hiệu lực ngay**. Đổi lại, Panel UI sẽ
+không thấy team đó và RBAC của MemoryCore không áp lên nó.
+
+Muốn đầy đủ: tạo team trong MemoryCore trước qua `/v3/meta/team/create` (cổng
+8420, cần admin key ở `deploy/global-images/.admin-key`), rồi chạy lại
+`new-project.sh <project> <thư-mục> --team <team_id thật>`.
+
+### Định dạng id
+
+`project-id` và `team-id` chỉ nhận `A-Za-z0-9_-`, tối đa 200 ký tự, **không có
+dấu chấm** — vì chúng bị nối thẳng vào đường dẫn file. `new-project.sh` kiểm tra
+ngay lúc sinh config để bạn khỏi gặp lỗi 400 khó hiểu lúc chạy.
 
 ---
 

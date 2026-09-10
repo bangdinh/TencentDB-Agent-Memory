@@ -77,6 +77,7 @@ else
   run_test smoke.mjs         "smoke test (13 tool, stdout sạch JSON-RPC)"
   run_test project-mode.mjs  "chế độ project (project id → wiki riêng, cache 1 lần)"
   run_test project-retry.mjs "đường lỗi chế độ project (API chết vẫn lên, retry được)"
+  run_test env-precedence.mjs "env của agent thắng local.env (điều kiện của multi-tenant)"
 fi
 
 # ─── 2. Không có secret trong file được git theo dõi ──────────────────

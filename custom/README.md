@@ -30,7 +30,7 @@ Trên Windows dùng `custom\install.bat`.
 | `env/local.env.example` | Template có commit, dùng để biết cần khai báo biến nào |
 | `agents-config/` | Nguồn sự thật của các file rule/MCP. `install.sh` sinh ra bản ở gốc repo |
 | `scripts/` | `start-mcp`, `start`, `stop` cho cả macOS/Linux (`.sh`) và Windows (`.bat`) |
-| `docs/HUONG_DAN_SU_DUNG.md` | Hướng dẫn sử dụng tiếng Việt |
+| `docs/USER_GUIDE.md` | Hướng dẫn cài đặt & sử dụng (tiếng Việt) |
 | `mcp-shared-memory/` | **MCP server riêng** — thay cho việc patch `MemoryKnowledge/src/mcp/` |
 | `patches/` | Diff của những chỗ **buộc phải sửa trực tiếp** trên code upstream |
 | `install.sh` / `install.bat` | Sinh cấu hình agent ra gốc repo |
@@ -75,37 +75,60 @@ restart agent / VS Code, không phải build lại gì.
 
 ## Tách bộ nhớ theo project (multi-tenant)
 
-Mặc định mọi agent dùng chung một wiki (`KNOWLEDGE_WIKI_ID`). Muốn mỗi project
-một vùng nhớ riêng trên cùng một stack:
+Mặc định mọi agent dùng chung một wiki. Muốn mỗi project một vùng nhớ riêng
+trên cùng một stack:
 
 ```bash
 bash custom/new-project.sh cueos /đường/dẫn/tới/project
 ```
 
-Lệnh này ghi `.vscode/mcp.json`, `.agents/mcp_config.json`, `.cursor/mcp.json`
-vào project đó, mỗi file khai:
+Mỗi project được cấp **riêng cả team lẫn wiki**:
 
-```json
-"env": { "KNOWLEDGE_PROJECT_ID": "cueos" }
-```
+| | Giá trị | Đổi bằng |
+|---|---|---|
+| `KNOWLEDGE_PROJECT_ID` | `cueos` | tham số thứ nhất |
+| `KNOWLEDGE_TEAM_ID` | `team-cueos` | `--team <team-id>` |
+| Wiki | tên `cueos`, tự tạo | — |
 
-Cơ chế:
+Lệnh ghi `.vscode/mcp.json`, `.agents/mcp_config.json`, `.cursor/mcp.json` vào
+project đó (không ghi đè file có sẵn) và in lệnh `claude mcp add` tương ứng.
 
-- **Token, API URL, team id vẫn dùng chung** từ `custom/env/local.env`. Chỉ
-  `KNOWLEDGE_PROJECT_ID` là riêng. `start-mcp.sh` coi `local.env` là *giá trị mặc
-  định* — biến nào agent đã truyền qua `env` thì giữ nguyên.
+### Vì sao tách tới tận team
+
+`team_id` là **một cấp thư mục thật trên đĩa**:
+`data/<service_id>/<team_id>/<resource_id>/` (`MemoryKnowledge/src/api-helpers.ts`).
+Tách team nghĩa là tách cây thư mục — project này không đọc được, và cũng không
+**liệt kê** được wiki của project kia. Nếu chỉ tách ở tầng wiki thì nội dung có
+riêng, nhưng `/wiki/list` trong cùng team vẫn thấy tên wiki của nhau.
+
+### Cơ chế
+
+- **Token và API URL vẫn dùng chung** từ `custom/env/local.env`; chỉ project id
+  và team id là riêng. `start-mcp.sh` coi `local.env` là *giá trị mặc định* —
+  biến nào agent đã truyền qua `env` thì giữ nguyên. Đây là điều kiện sống còn
+  của tính năng này, có test riêng (`test/env-precedence.mjs`) canh chừng.
 - Lần gọi tool `wiki_*` đầu tiên, server gọi `/wiki/create` với
-  `name = <project id>`. Endpoint này **idempotent theo `(service_id, team_id,
-  name)`** nên đã có thì trả về đúng wiki cũ, chưa có thì tạo. Không phải tạo tay.
-- Kết quả được cache trong vòng đời tiến trình → chỉ một lượt gọi thêm.
-- Có `KNOWLEDGE_PROJECT_ID` thì `KNOWLEDGE_WIKI_ID` bị bỏ qua. Agent truyền
-  `wiki_id` tường minh vào tool thì vẫn được ưu tiên cao nhất.
+  `name = <project id>`. Endpoint idempotent theo `(service_id, team_id, name)`
+  nên đã có thì trả wiki cũ, chưa có thì tạo. Kết quả cache theo tiến trình.
+- Thứ tự ưu tiên chọn wiki: `wiki_id` agent truyền thẳng → wiki của
+  `KNOWLEDGE_PROJECT_ID` → `KNOWLEDGE_WIKI_ID`.
 - Phân giải là **lười**, không phải lúc khởi động: stack tắt thì MCP server vẫn
-  lên bình thường, tool báo lỗi rõ ràng, và bật stack lên gọi lại là chạy —
-  thất bại không bị cache.
+  lên, tool báo lỗi rõ ràng, bật stack lên gọi lại là chạy — thất bại không cache.
 
-Muốn project dùng hẳn team khác (cách ly mạnh hơn, tách cả ở tầng
-`/wiki/list`) thì thêm `KNOWLEDGE_TEAM_ID` vào cùng khối `env` đó.
+### Giới hạn cần biết
+
+Team suy ra kiểu `team-<project-id>` **chưa được đăng ký trong MemoryCore**.
+Với Knowledge thì không sao — nó chỉ dùng `team_id` làm cấp thư mục và cột DB,
+không kiểm tra team có tồn tại hay không, nên **cách ly có hiệu lực ngay**.
+Nhưng Panel UI sẽ không thấy team đó và RBAC của MemoryCore không áp lên nó.
+
+Muốn đầy đủ thì tạo team trong MemoryCore trước — API `/v3/meta/team/create`
+ở cổng 8420, cần admin key trong `deploy/global-images/.admin-key` — rồi chạy
+`new-project.sh <project> <thư-mục> --team <team_id thật>`.
+
+Lưu ý định dạng: `project-id` và `team-id` chỉ nhận `A-Za-z0-9_-`, tối đa 200 ký
+tự, **không có dấu chấm** — vì chúng bị nối thẳng vào đường dẫn file. Script
+kiểm tra ngay lúc tạo config để khỏi nhận lỗi 400 khó hiểu lúc chạy.
 
 ## Kéo tính năng mới từ upstream
 
