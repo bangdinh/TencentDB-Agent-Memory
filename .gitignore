@@ -4,6 +4,14 @@ node_modules/
 # Runtime workspace
 workspace/
 
+# Backups
+backups/
+
+# Runtime data & logs
+**/flow_events.json
+custom/data/
+/.agents/
+
 # Environment variables
 .env
 

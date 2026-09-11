@@ -21,6 +21,7 @@ import {
 import { MCP_TOOLS, type McpToolDef } from "./tools.js";
 import { callApi, type HttpClientOptions } from "./http-client.js";
 import { createLogger } from "../logger.js";
+import { recordFlowEvent } from "./flow-recorder.js";
 
 const log = createLogger("mcp-server");
 
@@ -58,9 +59,13 @@ export function createMcpServer(httpOpts: HttpClientOptions): Server {
       };
     }
 
+    const startTime = Date.now();
     let body = (args ?? {}) as Record<string, unknown>;
-    const defaultWikiId = (process.env.KNOWLEDGE_WIKI_ID as string) || "wiki-9sr5qg3i";
+    const defaultWikiId = process.env.KNOWLEDGE_WIKI_ID || "";
     if (name.startsWith("wiki_") && !body.wiki_id) {
+      if (!defaultWikiId) {
+        log.warn(`No KNOWLEDGE_WIKI_ID set and no wiki_id in args for tool "${name}"`);
+      }
       body.wiki_id = defaultWikiId;
     }
     if (name === "wiki_write") {
@@ -77,6 +82,46 @@ export function createMcpServer(httpOpts: HttpClientOptions): Server {
     }
     try {
       const data = await callApi(httpOpts, tool.endpoint, body);
+      const durationMs = Date.now() - startTime;
+
+      // Parse page overviews for flow recording
+      let pageOverviews: Array<{ title: string; score?: number; overview?: string }> = [];
+      if (Array.isArray(data)) {
+        pageOverviews = data.slice(0, 5).map((item: any) => ({
+          title: item.title || item.ref || item.id || "Page",
+          score: item.score,
+          overview: (item.content || item.summary || item.text || item.overview || "").slice(0, 300),
+        }));
+      } else if (data && typeof data === "object") {
+        const list = (data as any).results || (data as any).nodes || (data as any).pages || (data as any).data || [];
+        if (Array.isArray(list)) {
+          pageOverviews = list.slice(0, 5).map((item: any) => ({
+            title: item.title || item.ref || item.id || "Page",
+            score: item.score,
+            overview: (item.content || item.summary || item.text || item.overview || "").slice(0, 300),
+          }));
+        } else if (name === "wiki_read") {
+          pageOverviews = [{
+            title: String(body.ref || body.title || "Page"),
+            overview: String((data as any)?.content || (data as any)?.text || JSON.stringify(data)).slice(0, 300),
+          }];
+        }
+      }
+      if (name === "wiki_write") {
+        pageOverviews = [{
+          title: String((body.pages as any)?.[0]?.ref || body.title || "Note"),
+          overview: String((body.pages as any)?.[0]?.content || body.content || "").slice(0, 300),
+        }];
+      }
+
+      recordFlowEvent({
+        tool: name,
+        wiki_id: String(body.wiki_id || defaultWikiId),
+        query: String(body.query || body.title || body.ref || (body.pages as any)?.[0]?.ref || ""),
+        duration_ms: durationMs,
+        status: "SUCCESS",
+        page_overview: pageOverviews,
+      });
 
       // The code-graph query endpoints return {text, isError} — pass through directly
       if (data && typeof data === "object" && "text" in data && "isError" in data) {
@@ -95,6 +140,14 @@ export function createMcpServer(httpOpts: HttpClientOptions): Server {
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       log.error(`tool ${name} failed: ${msg}`);
+      recordFlowEvent({
+        tool: name,
+        wiki_id: String(body.wiki_id || defaultWikiId),
+        query: String(body.query || body.title || body.ref || ""),
+        duration_ms: Date.now() - startTime,
+        status: "ERROR",
+        page_overview: [{ title: "Error", overview: msg }],
+      });
       return {
         content: [{ type: "text", text: `Error: ${msg}` }],
         isError: true,

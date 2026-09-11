@@ -226,7 +226,7 @@ export const MCP_TOOLS: McpToolDef[] = [
     inputSchema: {
       type: "object",
       properties: {
-        title: { type: "string", description: "Page title or key (e.g. su_kien_hom_nay, pass_today, note_thuan)" },
+        title: { type: "string", description: "Page title or key (e.g. su_kien_hom_nay, pass_today, note_dev)" },
         content: { type: "string", description: "The text content or markdown note to store in memory" },
         wiki_id: { type: "string", description: "The wiki ID (optional, defaults to shared wiki)" },
       },

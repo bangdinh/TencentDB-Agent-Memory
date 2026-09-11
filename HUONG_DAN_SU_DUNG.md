@@ -221,3 +221,142 @@ Người dùng **KHÔNG BAO GIỜ** cần phải ra lệnh: *"Hãy lưu vào b�
 3. **AI không nhận công cụ MCP**:
    * Kiểm tra terminal chạy thử `start-mcp.bat`. Nếu script báo lỗi đường dẫn node hoặc thư viện `tsx`, chạy `npm install` bên trong thư mục `MemoryKnowledge`.
    * Khởi động lại ứng dụng AI (Antigravity / Claude Desktop / Cursor) sau khi chỉnh sửa file json config.
+
+---
+
+## 8. CHIA SẺ HỆ THỐNG TRONG MẠNG LAN CHO MÁY KHÁC DÙNG CHUNG
+
+Để đồng nghiệp hoặc các máy tính khác trong cùng mạng nội bộ (Wi-Fi/LAN) có thể kết nối vào hệ thống trên máy chủ của bạn:
+
+### Bước 1: Mở cổng trên Windows Defender Firewall (Máy Host)
+Chạy lệnh sau trên **PowerShell (Run as Administrator)** của máy host:
+```powershell
+New-NetFirewallRule -DisplayName "TencentDB-Agent-Memory" -Direction Inbound -LocalPort 8125,8096,8424,8420 -Protocol TCP -Action Allow
+```
+
+### Bước 2: Xác định IP máy Host và cấu hình Proxy URL
+1. Gõ lệnh `ipconfig` trong terminal để xem IP card mạng Wi-Fi/Ethernet (ví dụ: `192.168.1.50`).
+2. Mở file `deploy/global-images/.env` và cập nhật:
+   ```properties
+   MEMORY_HUB_PROXY_PUBLIC_URL=http://<IP_MÁY_BẠN>:8096
+   # Ví dụ: MEMORY_HUB_PROXY_PUBLIC_URL=http://192.168.1.50:8096
+   ```
+3. Khởi động lại hệ thống: chạy `.\stop.bat` rồi `.\start.bat`.
+
+### Bước 3: Cách máy khác kết nối sử dụng
+* **Vào Web Dashboard**: Truy cập `http://<IP_MÁY_HOST>:8125` từ trình duyệt máy khác.
+  * Instance: `default`
+  * User Key đăng nhập: Lấy trong file `deploy/global-images/.admin-key`.
+* **Dùng Proxy LLM (Cursor, Claude Code, Cline...)**:
+  * Base URL: `http://<IP_MÁY_HOST>:8096/v1`
+  * API Key: Lấy theo User Key đã tạo
+  * Model: `gemini-flash-latest` (hoặc model đã cấu hình)
+* **Dùng MCP Tool từ xa**: Trong file cấu hình MCP của máy khác, trỏ biến môi trường:
+  ```json
+  "env": {
+    "KNOWLEDGE_API_URL": "http://<IP_MÁY_HOST>:8424",
+    "KNOWLEDGE_API_TOKEN": "<YOUR_API_TOKEN>",
+    "KNOWLEDGE_TEAM_ID": "team-default",
+    "KNOWLEDGE_WIKI_ID": "wiki-9sr5qg3i"
+  }
+  ```
+
+---
+
+## 9. QUY TẮC PHÁT TRIỂN CODE TÙY BIẾN (THƯ MỤC `custom/`)
+
+Dự án áp dụng **Mô hình Thư mục Độc lập (Independent Custom Folder)** để đảm bảo khi cập nhật mã nguồn gốc từ TencentCloud sẽ không bao giờ bị xung đột hoặc mất tính năng tự code:
+
+```
+custom/
+├── services/          # Chứa microservice, background worker
+│   └── README.md
+├── agents/            # Chứa AI Agent tự viết dùng Shared Memory
+│   └── README.md
+├── mcp-tools/         # Chứa custom MCP server mở rộng (Jira, GitHub...)
+│   └── README.md
+├── scripts/           # Chứa script tự động hóa (backup, sync, clean)
+│   └── README.md
+├── .env.example       # Mẫu biến môi trường riêng cho custom/
+└── start-custom.bat   # Script khởi chạy tập trung các custom services
+```
+
+### 4 Nguyên tắc cốt lõi:
+1. **Bất khả xâm phạm 4 thư mục Core**: Tuyệt đối KHÔNG sửa, xóa, hoặc tạo file trong: `MemoryCore/`, `MemoryKnowledge/`, `MemoryPanel/`, `MemoryProxy/`.
+2. **Khu vực làm việc duy nhất**: Mọi tính năng custom phải nằm hoàn toàn trong thư mục `custom/`.
+3. **Chỉ giao tiếp qua API / SDK**: Code trong `custom/` chỉ giao tiếp với Core qua:
+   - REST API: `http://127.0.0.1:8420` (Core), `http://127.0.0.1:8424` (Knowledge)
+   - SDK: `sdk/memory-core/typescript` hoặc `sdk/memory-core/python`
+   - *Tuyệt đối không import trực tiếp source code của core.*
+4. **Cấu hình độc lập**: Sử dụng `custom/.env` riêng, không ghi đè vào `.env` gốc của hệ thống.
+
+---
+
+## 10. SAO LƯU & PHỤC HỒI DỰ PHÒNG (BACKUP & RESTORE)
+
+Hệ thống đã tích hợp sẵn công cụ sao lưu toàn diện để an tâm thử nghiệm tính năng mới:
+
+### Tạo bản sao lưu (Backup)
+Chạy script tại thư mục gốc:
+```cmd
+.\backup.bat
+```
+Lựa chọn 2 chế độ:
+* **[1] Full Backup**: Sao lưu toàn bộ mã nguồn `custom/`, file cấu hình (`.env`, `.admin-key`, `CLAUDE.md`, `mcp_config.json`) và toàn bộ **Docker Data Volumes** (`tdai-memory-core-data`, `tdai-panel-data`). Tự động tạm dừng container để nén dữ liệu SQLite/VectorDB mà không sợ hỏng database.
+* **[2] Quick Backup**: Chỉ sao lưu mã nguồn `custom/` và cấu hình (chạy siêu nhanh trong **1 giây**, không cần dừng Docker). Thích hợp trước khi chuẩn bị sửa logic code.
+
+*Dữ liệu backup được lưu trong thư mục `backups/backup_YYYYMMDD_HHMMSS/`.*
+
+### Khôi phục khi gặp lỗi (Rollback / Restore)
+Chạy script:
+```cmd
+.\restore.bat
+```
+1. Script sẽ hiển thị danh sách tất cả các bản backup kèm ngày giờ và ghi chú.
+2. Nhập số thứ tự bản backup muốn khôi phục.
+3. Bấm `Y` xác nhận. Toàn bộ code và cơ sở dữ liệu sẽ được đưa về chính xác trạng thái tại thời điểm backup.
+
+---
+
+## 11. GIẢI PHÁP TRÁNH "LOẠN BỘ NHỚ" KHI DÙNG NHIỀU PROJECT
+
+Nếu bạn dùng 1 hệ thống TencentDB-Agent-Memory cho nhiều dự án khác nhau:
+1. **Tách `wiki_id` riêng cho mỗi Project**:
+   - Trên Web Panel, tạo 1 Wiki riêng cho từng project (ví dụ: `wiki-project-shop`, `wiki-project-blog`).
+   - Trong file cấu hình MCP của từng project, truyền `KNOWLEDGE_WIKI_ID` tương ứng vào `env`:
+     ```json
+     "env": {
+       "KNOWLEDGE_WIKI_ID": "wiki-project-shop"
+     }
+     ```
+2. **Cấu hình Dual MCP Server (1 IDE kết nối cùng lúc 2 Wiki)**:
+   Khai báo 2 server trong file cấu hình MCP (`.agents/mcp_config.json` hoặc `claude_desktop_config.json`):
+   ```json
+   {
+     "mcpServers": {
+       "tencent-memory-agent": {
+         "command": "node",
+         "args": ["--no-warnings", "d:\\path\\MemoryKnowledge\\node_modules\\tsx\\dist\\cli.mjs", "d:\\path\\MemoryKnowledge\\src\\mcp\\server.ts"],
+         "env": {
+           "KNOWLEDGE_API_URL": "http://192.168.1.50:8424",
+           "KNOWLEDGE_API_TOKEN": "<YOUR_API_TOKEN>",
+           "KNOWLEDGE_TEAM_ID": "team-default",
+           "KNOWLEDGE_WIKI_ID": "wiki-jeq1u9eq"
+         }
+       },
+       "tencent-memory-cueos": {
+         "command": "node",
+         "args": ["--no-warnings", "d:\\path\\MemoryKnowledge\\node_modules\\tsx\\dist\\cli.mjs", "d:\\path\\MemoryKnowledge\\src\\mcp\\server.ts"],
+         "env": {
+           "KNOWLEDGE_API_URL": "http://192.168.1.50:8424",
+           "KNOWLEDGE_API_TOKEN": "<YOUR_API_TOKEN>",
+           "KNOWLEDGE_TEAM_ID": "team-default",
+           "KNOWLEDGE_WIKI_ID": "wiki-9sr5qg3i"
+         }
+       }
+     }
+   }
+   ```
+3. **Quy ước đặt tên (Naming Convention)**:
+
+

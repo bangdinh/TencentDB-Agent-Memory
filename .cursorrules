@@ -1,6 +1,6 @@
 # Autonomous Shared Memory Rules for Cursor
 
-You have access to a shared memory system via MCP server "tencent-memory" (Wiki ID: wiki-9sr5qg3i).
+You have access to a shared memory system via MCP server "tencent-memory" (Project Wiki ID: wiki-jeq1u9eq).
 All AI agents (Claude, Cursor, Antigravity, Cline, Copilot) share the SAME persistent memory.
 
 ## CRITICAL: Zero-Prompt Autonomous Memory Policy
@@ -16,7 +16,7 @@ Whenever the user reveals ANY meaningful information in chat, immediately call `
 *(Bỏ qua các câu chào hỏi xã giao, cảm ơn, tán gẫu không có dữ liệu thực tế).*
 
 Parameters for `wiki_write`:
-- `wiki_id`: "wiki-9sr5qg3i"
+- `wiki_id`: "wiki-jeq1u9eq" (hoặc "wiki-9sr5qg3i" nếu là dữ liệu cá nhân chung)
 - `title`: descriptive key (e.g. `user_profile`, `server_infra`, `pet_info`, `convention_react`)
 - `content`: factual markdown summary
 
