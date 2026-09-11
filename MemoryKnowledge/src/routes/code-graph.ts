@@ -337,7 +337,7 @@ export function createCodeGraphRoutes(deps: CodeGraphRouteDeps): Hono {
 
       let instance = instancePool.get(cgId);
       if (!instance && instancePool.loadIfMissing) {
-        const dir = cgService.dirFor(serviceId, row.team_id, cgId);
+        const dir = cgService.dirFor(row.service_id, row.team_id, cgId);
         instance = await instancePool.loadIfMissing(cgId, dir);
       }
       if (!instance) {
