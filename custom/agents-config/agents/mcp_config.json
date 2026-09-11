@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "tencent-memory": {
+      "command": "__MCP_COMMAND__",
+      "args": __MCP_ARGS__
+    }
+  }
+}

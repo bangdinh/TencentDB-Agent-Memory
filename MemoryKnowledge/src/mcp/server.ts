@@ -118,9 +118,6 @@ export function createMcpServer(httpOpts: HttpClientOptions): Server {
   return server;
 }
 
-import { fileURLToPath } from "url";
-import path from "path";
-
 // Start server when run directly
 const isMain = process.argv[1] && (
   fileURLToPath(import.meta.url) === process.argv[1] ||
