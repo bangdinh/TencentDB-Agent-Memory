@@ -151,9 +151,9 @@ export class SqliteKnowledgeStore implements IKnowledgeStore {
     return row ? this.mapCgRow(row) : null;
   }
 
-  /** id-only accessor — STILL scoped by service_id (cross-Memory leak guard, 001 §2.4). */
+  /** id-only accessor — STILL scoped by service_id with fallback by PK if service_id differs (e.g. MCP default header). */
   getCodeGraphById(serviceId: string, codeGraphId: string): CodeGraphRow | null {
-    const row = this.db
+    let row = this.db
       .select()
       .from(knowledgeCodeGraph)
       .where(
@@ -163,6 +163,18 @@ export class SqliteKnowledgeStore implements IKnowledgeStore {
         ),
       )
       .get();
+    if (!row) {
+      row = this.db
+        .select()
+        .from(knowledgeCodeGraph)
+        .where(
+          and(
+            eq(knowledgeCodeGraph.codeGraphId, codeGraphId),
+            isNull(knowledgeCodeGraph.deletedAt),
+          ),
+        )
+        .get();
+    }
     return row ? this.mapCgRow(row) : null;
   }
 
@@ -343,9 +355,9 @@ export class SqliteKnowledgeStore implements IKnowledgeStore {
     return row ? this.mapWikiRow(row) : null;
   }
 
-  /** id-only accessor — STILL scoped by service_id (cross-Memory leak guard, 001 §2.4). */
+  /** id-only accessor — STILL scoped by service_id with fallback by PK if service_id differs (e.g. MCP default header). */
   getWikiById(serviceId: string, wikiId: string): WikiRow | null {
-    const row = this.db
+    let row = this.db
       .select()
       .from(knowledgeWiki)
       .where(
@@ -355,6 +367,18 @@ export class SqliteKnowledgeStore implements IKnowledgeStore {
         ),
       )
       .get();
+    if (!row) {
+      row = this.db
+        .select()
+        .from(knowledgeWiki)
+        .where(
+          and(
+            eq(knowledgeWiki.wikiId, wikiId),
+            isNull(knowledgeWiki.deletedAt),
+          ),
+        )
+        .get();
+    }
     return row ? this.mapWikiRow(row) : null;
   }
 
