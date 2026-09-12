@@ -24,6 +24,53 @@ Hệ thống gồm 3 container Docker, cộng một MCP server chạy ngoài Doc
 Nếu gọi `custom/scripts/start-mcp.sh` ngoài terminal, nó sẽ đứng im chờ JSON-RPC:
 đúng như thiết kế, không phải lỗi.
 
+### Sơ đồ
+
+```
+┌─ STACK (Docker — dựng MỘT lần, dùng chung cả máy) ─────────┐
+│                                                            │
+│   memory-core  :8420   lưu trữ, RBAC, metadata             │
+│   memory-hub   :8424   Knowledge API  ← MCP nối vào đây    │
+│                :8125   Panel UI                            │
+│   memory-proxy :8096   tuỳ chọn, có thể không dùng         │
+│                                                            │
+│   Cấu hình ở: deploy/global-images/.env                    │
+└────────────────────────────────────────────────────────────┘
+              ▲                      ▲
+              │ stdio                │ stdio
+     ┌────────┴────────┐    ┌────────┴────────┐
+     │  Claude Code    │    │  Antigravity    │
+     │  .mcp.json      │    │ .agents/        │
+     │                 │    │  mcp_config.json│
+     └─────────────────┘    └─────────────────┘
+       mỗi project một bản, xem mục 6
+```
+
+### Hai tầng cấu hình, đừng lẫn
+
+| | Cấu hình ở đâu | Bao nhiêu bản |
+|---|---|---|
+| **Stack** | `deploy/global-images/.env` | **1 cho cả máy** |
+| **Client nối vào stack** | `.mcp.json`, `.agents/mcp_config.json`, … | 1 mỗi project |
+
+Không có chuyện "file env cho Claude Code" hay "file env cho Antigravity".
+Mọi agent đều là *client*, cùng nối vào **một** stack duy nhất. Muốn tách bộ nhớ
+theo project thì làm ở tầng client (mục 6), không phải ở `.env`.
+
+### `MEMORY_LLM_API_KEY` KHÔNG phải model bạn chat cùng
+
+Đây là chỗ dễ nhầm nhất. LLM khai trong `.env` là để **stack tự xử lý bộ nhớ**:
+khi bạn bảo agent "nhớ giùm tôi X", stack cần một LLM đọc X, tóm tắt, phân loại
+rồi cất vào wiki. Nó chạy ngầm, bạn không thấy output của nó.
+
+Model bạn đang chat (Claude, Gemini, …) là chuyện hoàn toàn khác, do client
+quyết định. Nên ở `.env` cứ chọn model **rẻ và nhanh**, không cần model mạnh.
+
+| Nhóm biến | Dùng để | Bắt buộc? |
+|---|---|---|
+| `MEMORY_LLM_*` | stack tóm tắt / trích xuất khi ghi memory | Có |
+| `PROXY_UPSTREAM_*` | proxy chuyển tiếp request lên LLM thượng nguồn | Có, dù không dùng proxy — `start-all.sh` bắt đủ biến trước khi chạy. Điền trùng nhóm trên là được |
+
 ---
 
 ## 2. Yêu cầu
@@ -355,6 +402,54 @@ Nhớ `stop.sh` trước khi backup, tránh chép trúng lúc SQLite đang ghi.
 ---
 
 ## 10. Xử lý lỗi
+
+### Ghi được nhưng `wiki_list` / `wiki_search` trả rỗng
+
+Triệu chứng dễ nhận: `wiki_write` báo thành công, file **có thật** trên đĩa ở
+`/data/knowledge/<service>/<team>/<wiki>/wiki/*.md`, nhưng `wiki_list` và
+`wiki_search` trả rỗng — và **không có thông báo lỗi nào**.
+
+Nguyên nhân: wiki tạo qua đường multi-tenant (khi có `KNOWLEDGE_PROJECT_ID`)
+nằm ở `status='draft'`. `MemoryKnowledge/src/store/wiki-service.ts` chặn cứng:
+
+```js
+pageLs(...) { ... if (row.status !== "ready") return []; }
+```
+
+> Dòng log `[wiki] wikiMgr.sync(...) failed: Not found` là **đánh lạc hướng**.
+> `wikiMgr` là hệ thống wiki-source riêng (ingest từ git), wiki multi-tenant
+> không đăng ký ở đó. Lỗi này đã được try/catch và vô hại.
+
+**Cách xử: ingest một lần.** `/v3/wiki/ingest` từ chối nếu `raw/` rỗng, nên phải
+nạp một file mầm trước:
+
+```bash
+WIKI=wiki-xxxxxxxx; TEAM=team-xxxx
+curl -s -X POST http://127.0.0.1:8424/v3/wiki/raw/write \
+  -H 'Content-Type: application/json' -H 'x-tdai-service-id: default' \
+  -d "{\"wiki_id\":\"$WIKI\",\"team_id\":\"$TEAM\",\"files\":[{\"filename\":\"seed.md\",\"content\":\"# Wiki\\n\\nTrang mam.\\n\"}]}"
+
+curl -s -X POST http://127.0.0.1:8424/v3/wiki/ingest \
+  -H 'Content-Type: application/json' -H 'x-tdai-service-id: default' \
+  -d "{\"wiki_id\":\"$WIKI\",\"team_id\":\"$TEAM\"}"
+```
+
+Trường là `filename`, **không phải** `name` — sai tên sẽ nhận 400 khó hiểu.
+
+Chờ 15–40 giây, LLM sinh ra 9–13 trang khung, `status` chuyển `ready`. Từ đó
+`wiki_write` / `wiki_list` / `wiki_search` chạy bình thường.
+
+Kiểm tra trạng thái:
+
+```bash
+curl -s -X POST http://127.0.0.1:8424/v3/wiki/get \
+  -H 'Content-Type: application/json' -H 'x-tdai-service-id: default' \
+  -d "{\"wiki_id\":\"$WIKI\",\"team_id\":\"$TEAM\"}"
+```
+
+**Mỗi project mới đều phải làm bước này một lần.** Bỏ qua thì wiki im lặng trả
+rỗng mãi mãi.
+
 
 **Docker không khởi động**
 Bật Docker Desktop trước khi chạy `start.sh`. Kiểm tra xung đột cổng
