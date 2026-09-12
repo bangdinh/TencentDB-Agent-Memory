@@ -1,4 +1,15 @@
 #!/usr/bin/env bash
+# ⚠️  ĐÃ THAY THẾ — dùng custom/provision-project.mjs.
+#
+#     node custom/provision-project.mjs <project-id> <thư-mục-project>
+#
+# Script này đặt team_id kiểu "team-<project-id>" do mình tự nghĩ ra. Knowledge
+# chấp nhận (nó chỉ dùng team_id làm tên thư mục), nhưng MemoryCore KHÔNG biết
+# team đó nên Panel :8125 không nhìn thấy và RBAC không áp được. Nó cũng không
+# sinh .mcp.json (file Claude Code đọc), và không bootstrap wiki khỏi trạng thái
+# draft — hệ quả là wiki_write báo thành công mà wiki_list trả rỗng.
+# Giữ lại để tham khảo và cho trường hợp stack chưa chạy.
+#
 # Sinh cấu hình MCP cho MỘT project, với bộ nhớ tách riêng hoàn toàn.
 #
 #   bash custom/new-project.sh <project-id> [thư-mục-project] [--team <team-id>]

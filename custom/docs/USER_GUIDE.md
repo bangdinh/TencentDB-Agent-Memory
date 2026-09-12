@@ -212,6 +212,39 @@ icon ở khay hệ thống) rồi mở lại. Biểu tượng 🔨 sẽ hiện c
 
 ## 6. Tách bộ nhớ theo project (multi-tenant)
 
+### Cách làm: một lệnh
+
+```bash
+node custom/provision-project.mjs <project-id> <thư-mục-project>
+```
+
+Script lo trọn gói, chạy lại an toàn (không ghi đè file đã có):
+
+| Bước | Làm gì |
+|---|---|
+| 1 | Xác thực admin bằng `deploy/global-images/.admin-key` |
+| 2 | Tạo **team thật trong MemoryCore** — Panel `:8125` nhìn thấy, RBAC áp được |
+| 3 | Tạo wiki tên `<project-id>` trong team đó |
+| 4 | **Bootstrap `draft` → `ready`** (nạp file mầm rồi ingest) — xem mục 10 |
+| 5 | Sinh `.mcp.json`, `.cursor/mcp.json`, `.agents/mcp_config.json`, `.vscode/mcp.json` và `CLAUDE.md` |
+
+Tuỳ chọn:
+
+```bash
+--team-name <tên>     # tên hiển thị trong Panel (mặc định = project-id)
+--reuse-team <id>     # nhiều project dùng chung một team, đọc chéo được
+--no-config           # chỉ cấp team/wiki, in cấu hình ra màn hình
+```
+
+> **`custom/new-project.sh` đã bị thay thế.** Nó tự đặt `team_id` kiểu
+> `team-<project-id>` — Knowledge chấp nhận nhưng MemoryCore không biết team đó,
+> nên Panel không thấy và RBAC không áp. Nó cũng không sinh `.mcp.json` và không
+> bootstrap wiki khỏi `draft`.
+
+**Team id do MemoryCore sinh**, không tự đặt được (`teamCreateSchema` không nhận
+`team_id`). Muốn tên dễ đọc trong Panel thì dùng `--team-name`.
+
+
 Mặc định mọi project dùng chung một wiki. Muốn mỗi project một vùng nhớ riêng
 trên **cùng một stack**:
 
