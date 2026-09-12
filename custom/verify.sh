@@ -115,8 +115,15 @@ else
   ok "custom/env/local.env tồn tại"
 fi
 for f in .clinerules .cursorrules AGENTS.md CLAUDE.md .vscode/mcp.json \
-         .github/copilot-instructions.md .agents/mcp_config.json; do
+         .github/copilot-instructions.md .agents/mcp_config.json \
+         .claude/skills/setup-proxy/SKILL.md; do
   [[ -f "$f" ]] && ok "$f" || bad "$f — chạy: bash custom/install.sh"
+done
+# Stub skill và mục "Skill Routing" đều chỉ là CON TRỎ sang file của upstream.
+# Upstream dời/đổi tên file là con trỏ chết âm thầm — chặn ở đây.
+for t in agents/skills/setup-proxy/SKILL.md agents/skills/setup-proxy/setup-proxy.sh; do
+  [[ -f "$t" ]] && ok "con trỏ skill còn sống → $t" \
+    || bad "$t không còn (upstream dời/đổi tên) — sửa custom/agents-config/skills/setup-proxy/SKILL.md"
 done
 if [[ -f .vscode/mcp.json ]] && grep -q '__MCP_' .vscode/mcp.json; then
   bad ".vscode/mcp.json còn placeholder — chạy lại custom/install.sh"

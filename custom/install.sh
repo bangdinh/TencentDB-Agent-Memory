@@ -47,6 +47,14 @@ while IFS= read -r f; do
   render "$f" "$REPO_ROOT/.agents/${f#$SRC/agents/}"
 done < <(find "$SRC/agents" -type f)
 
+# .claude/skills/ — stub skill trỏ sang file gốc của upstream.
+# Client khác đặt skill ở chỗ khác: thêm một vòng lặp tương tự là xong,
+# nội dung stub trong custom/agents-config/skills/ dùng chung, không viết lại.
+rm -rf "$REPO_ROOT/.claude/skills"
+while IFS= read -r f; do
+  render "$f" "$REPO_ROOT/.claude/skills/${f#$SRC/skills/}"
+done < <(find "$SRC/skills" -type f)
+
 # ─── Nhắc về file env ─────────────────────────────────────────────────
 if [[ ! -f "$CUSTOM_DIR/env/local.env" ]]; then
   echo

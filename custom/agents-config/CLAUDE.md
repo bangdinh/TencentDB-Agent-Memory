@@ -26,3 +26,19 @@ Always call `wiki_search` with relevant keywords BEFORE answering if:
 - The user asks for project configs, credentials, or architecture decisions previously mentioned.
 - Any question hinting at past memory or shared facts.
 
+## 3. SKILL CÓ SẴN TRONG REPO (Proactive Skill Routing)
+
+Repo chứa sẵn quy trình dạng skill nhưng KHÔNG đặt ở `.claude/skills/` nên không
+tự nạp. Khi gặp đúng tình huống dưới đây, tự `Read` file tương ứng rồi làm theo —
+user sẽ không nhắc bạn đọc.
+
+| Đọc file | Khi nào |
+|---|---|
+| `agents/skills/setup-proxy/SKILL.md` | User muốn cấu hình, đấu nối hoặc kiểm tra một AI agent client (Claude Code, CodeBuddy, Codex, WorkBuddy, dsh, Hermes, OpenClaw) đi qua Memory Proxy. Nhận diện: "cấu hình proxy", "setup proxy", "đấu agent vào memory", "接入 proxy", "proxy chạy chưa", "sao agent không thấy memory". Script đi kèm: `agents/skills/setup-proxy/setup-proxy.sh` (dùng `--non-interactive` ở bước ghi config). |
+
+⚠️ `setup-proxy` ghi vào file config GLOBAL của user (ví dụ `~/.claude/settings.json`),
+đổi hướng toàn bộ LLM traffic của client đó qua proxy. Luôn tóm tắt chính xác những
+gì sắp ghi và hỏi user xác nhận TRƯỚC khi chạy bước ghi.
+
+`MemoryCore/SKILL.md` thuộc lineage cũ `memory-tencentdb` / OpenClaw (nhánh
+`upstream/main`), không áp dụng cho bản v2.x này — bỏ qua, đừng làm theo.
