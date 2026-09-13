@@ -224,9 +224,19 @@ Ngay khi người dùng để lộ bất kỳ thông tin có giá trị lâu dà
   cách đặt commit message
 - **Dặn dò & mốc thời gian**: deadline, việc còn treo, điều cần tránh
 
-\`title\` đặt ngắn và có tính phân loại (\`decision_auth_flow\`,
-\`convention_naming\`, \`infra_staging\`). \`content\` viết markdown, nêu cả
-lý do chứ không chỉ kết luận.
+### Ngôn ngữ và cách đặt tên
+
+**\`title\` phải là ASCII không dấu, snake_case** — \`decision_auth_flow\`,
+\`convention_naming\`, \`infra_staging\`. Hệ thống sinh page id bằng cách bỏ
+dấu khỏi title, và tiếng Việt có dấu bị băm nát: "Bộ nhớ chung của Bằng" thành
+\`concepts/b-nh-chung-c-a-b-ng\` — không đọc được, không tra theo id được nữa.
+
+**\`content\` viết tiếng Việt có dấu**, giữ nguyên thuật ngữ tiếng Anh (MQTT,
+Compose, RPC, gRPC…). Đừng dịch nội dung sang tiếng Anh: người dùng tra bằng
+tiếng Việt, mà BM25 không dịch — tra tiếng Việt vào kho tiếng Anh là trượt.
+Thuật ngữ tiếng Anh mới là từ khoá mang trọng số cao nhất, nên giữ nguyên.
+
+Nêu cả **lý do** chứ không chỉ kết luận.
 
 Bỏ qua: chào hỏi, cảm ơn, tán gẫu, và những gì đọc thẳng từ code ra được.
 
