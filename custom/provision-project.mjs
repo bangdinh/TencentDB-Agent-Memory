@@ -178,18 +178,49 @@ if (!writeConfig || !targetDir) {
   }
   const claudeMd = join(root, "CLAUDE.md");
   if (!existsSync(claudeMd)) {
-    writeFileSync(claudeMd, `# Bộ nhớ — luật chọn server
+    writeFileSync(claudeMd, `# Bộ nhớ chung — bắt buộc dùng chủ động
 
-Project này có MCP server riêng: **\`${serverName}\`** (wiki \`${projectId}\`, team \`${teamId}\`).
+Project này có MCP server bộ nhớ riêng: **\`${serverName}\`**
+(wiki \`${projectId}\`, team \`${teamId}\`).
 
-Ghi và tra bộ nhớ đều dùng \`${serverName}\`: \`wiki_write\` để ghi, \`wiki_search\`
-để tra trước khi trả lời câu hỏi gợi nhớ.
+## QUAN TRỌNG: ghi nhớ chủ động, không đợi được nhắc
 
-**KHÔNG dùng \`memory-agents\`** trong project này — đó là bộ nhớ cá nhân dùng
-chung cho mọi nơi, ghi nội dung project vào đó là lẫn ngữ cảnh và không gỡ ra được.
+Người dùng sẽ **KHÔNG** nhắc bạn dùng bộ nhớ. Bạn phải tự quản lý nó — chủ
+động, tự động, và im lặng (không báo cáo mỗi lần ghi).
 
-Các server có tool trùng tên (\`wiki_write\`, \`wiki_search\`, …) nên phải nhìn
-tiền tố server để chọn đúng.
+### 1. Tự động GHI (\`${serverName}\` → \`wiki_write\`)
+
+Ngay khi người dùng để lộ bất kỳ thông tin có giá trị lâu dài nào, gọi
+\`wiki_write\` luôn, không hỏi xin phép:
+
+- **Kỹ thuật & cấu hình**: endpoint, port, domain, tên service, biến môi
+  trường, schema DB, hạ tầng, phiên bản công cụ
+- **Quyết định & lý do**: chọn thư viện/kiến trúc nào và **vì sao**, phương án
+  đã cân nhắc rồi loại bỏ, đánh đổi đã chấp nhận
+- **Quy ước dự án**: coding convention, quy tắc đặt tên, quy trình review,
+  cách đặt commit message
+- **Dặn dò & mốc thời gian**: deadline, việc còn treo, điều cần tránh
+
+\`title\` đặt ngắn và có tính phân loại (\`decision_auth_flow\`,
+\`convention_naming\`, \`infra_staging\`). \`content\` viết markdown, nêu cả
+lý do chứ không chỉ kết luận.
+
+Bỏ qua: chào hỏi, cảm ơn, tán gẫu, và những gì đọc thẳng từ code ra được.
+
+### 2. Tự động TRA (\`${serverName}\` → \`wiki_search\`)
+
+Gọi \`wiki_search\` **trước khi trả lời** mọi câu hỏi có thể đã bàn trước đó:
+quyết định cũ, quy ước, cấu hình, "hôm trước mình chốt gì". Đừng vội kết luận
+là không biết khi chưa tra.
+
+## Chọn đúng server
+
+Dùng \`${serverName}\`. **KHÔNG dùng \`memory-agents\`** trong project này —
+đó là bộ nhớ cá nhân dùng chung mọi nơi; ghi nội dung project vào đó là lẫn
+ngữ cảnh và không gỡ ra được.
+
+Các server có tool trùng tên (\`wiki_write\`, \`wiki_search\`, …) nên phải
+nhìn tiền tố server để chọn cho đúng.
 `);
     ok("CLAUDE.md");
   } else info("⏭  CLAUDE.md đã có — không ghi đè");
