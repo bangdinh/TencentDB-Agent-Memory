@@ -213,11 +213,17 @@ Gọi \`wiki_search\` **trước khi trả lời** mọi câu hỏi có thể đ
 quyết định cũ, quy ước, cấu hình, "hôm trước mình chốt gì". Đừng vội kết luận
 là không biết khi chưa tra.
 
-## Chọn đúng server
+## Chỉ ghi MỘT chỗ — đừng nhân đôi
 
-Dùng \`${serverName}\`. **KHÔNG dùng \`memory-agents\`** trong project này —
-đó là bộ nhớ cá nhân dùng chung mọi nơi; ghi nội dung project vào đó là lẫn
-ngữ cảnh và không gỡ ra được.
+Mọi thứ thuộc project này ghi vào \`${serverName}\`, và **chỉ vào đó**.
+
+**KHÔNG ghi thêm một bản sang \`memory-general\`.** Ghi cả hai chỗ là nhân
+đôi dữ liệu: lần sau tra ra hai bản, sửa một bản thì bản kia lặng lẽ thành sai,
+và không có cách nào biết bản nào mới hơn.
+
+\`memory-general\` chỉ dành cho thứ **không thuộc project nào** — sở thích
+cá nhân, cách làm việc chung, ghi chú vụn. Khi đang làm trong thư mục project
+thì gần như không bao giờ cần tới nó.
 
 Các server có tool trùng tên (\`wiki_write\`, \`wiki_search\`, …) nên phải
 nhìn tiền tố server để chọn cho đúng.
