@@ -18,22 +18,37 @@ export type { McpToolDef };
 const DESCRIPTION_OVERRIDES: Record<string, string> = {
   wiki_search:
     "Tìm trong shared memory và wiki theo từ khoá, dùng chung cho mọi AI agent. " +
-    "LUÔN gọi tool này khi người dùng hỏi về dữ kiện cũ, sở thích, ngày tháng, mật khẩu hoặc bối cảnh đã trao đổi trước đó.",
+    "LUÔN gọi TRƯỚC KHI TRẢ LỜI mọi câu hỏi có thể đã bàn trước đó: quyết định cũ, " +
+    "quy ước, cấu hình đã chốt, sở thích, 'hôm trước mình chốt gì'. Đừng kết luận " +
+    "là không biết khi chưa tra. Truy vấn đặt bằng tiếng Việt cho khớp nội dung đã lưu.",
   wiki_list: "Liệt kê toàn bộ trang trong shared memory kèm metadata (title, type, path).",
 };
 
 /** Tool ghi — upstream không có, đây là tool của mình. */
 const WIKI_WRITE: McpToolDef = {
   name: "wiki_write",
+  // Luật ghi nhớ đặt ở ĐÂY chứ không nhân bản vào CLAUDE.md từng project: mọi
+  // server (memory-vm, memory-b2b, ...) chạy chung codebase này nên sửa một chỗ
+  // là cả hệ thống thấy ngay, không phải sinh lại file nào.
   description:
-    "Lưu dữ kiện, sở thích người dùng, sự kiện, ngày tháng, ghi chú hoặc thông tin dự án vào shared memory. " +
-    "LUÔN gọi tool này ngay khi người dùng cung cấp thông tin mới (ví dụ 'hôm nay là...', 'nhớ là...', 'tôi tên...'). " +
-    "Đừng chỉ trả lời bằng văn bản — hãy gọi tool.",
+    "Lưu dữ kiện, quyết định, quy ước hoặc thông tin dự án vào shared memory. " +
+    "LUÔN gọi ngay khi người dùng để lộ thông tin có giá trị lâu dài — cấu hình, " +
+    "quyết định kiến trúc kèm lý do, quy ước, dặn dò có hạn. Đừng chỉ trả lời " +
+    "bằng văn bản, đừng hỏi xin phép. Bỏ qua chào hỏi, tán gẫu, và những gì đọc " +
+    "thẳng từ code ra được. " +
+    "TITLE: tiếng Anh, snake_case (decision_auth_flow, naming_convention) — page " +
+    "id sinh ra bằng cách bỏ dấu khỏi title nên tiếng Việt có dấu bị băm nát. " +
+    "CONTENT: tiếng Việt có dấu, giữ nguyên thuật ngữ tiếng Anh (MQTT, Compose, " +
+    "RPC) — BM25 không dịch, viết nội dung tiếng Anh là tự làm trượt truy vấn " +
+    "tiếng Việt của người dùng. Nêu cả lý do, không chỉ kết luận. " +
+    "CHỈ GHI MỘT CHỖ: thuộc project nào thì ghi vào server của project đó và chỉ " +
+    "vào đó, đừng ghi thêm bản sao sang memory-general — nhân đôi thì sau này sửa " +
+    "một bản, bản kia lặng lẽ thành sai.",
   inputSchema: {
     type: "object",
     properties: {
-      title: { type: "string", description: "Tiêu đề / khoá của trang (vd: su_kien_hom_nay, note_thuan)" },
-      content: { type: "string", description: "Nội dung text hoặc markdown cần lưu" },
+      title: { type: "string", description: "Khoá của trang: TIẾNG ANH, snake_case (vd: decision_auth_flow, working_preferences)" },
+      content: { type: "string", description: "Nội dung markdown, viết TIẾNG VIỆT có dấu, giữ thuật ngữ tiếng Anh" },
       wiki_id: { type: "string", description: "Wiki ID (không bắt buộc, mặc định lấy từ KNOWLEDGE_WIKI_ID)" },
     },
     required: ["title", "content"],

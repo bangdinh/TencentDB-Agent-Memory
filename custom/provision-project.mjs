@@ -199,74 +199,46 @@ if (!writeConfig || !targetDir) {
     writeFileSync(p, content);
     ok(rel);
   }
-  const claudeMd = join(root, "CLAUDE.md");
-  if (!existsSync(claudeMd)) {
-    writeFileSync(claudeMd, `# Bộ nhớ chung — bắt buộc dùng chủ động
+  // Repo git: KHÔNG đụng file được theo dõi. .gitignore và CLAUDE.md là tài sản
+  // chung của team, mà cấu hình memory chỉ đúng trên máy này (đường dẫn tuyệt
+  // đối, tên server local). Che bằng .git/info/exclude — nằm trong .git/, không
+  // bao giờ commit. Thư mục thường (không phải repo) thì mới sinh CLAUDE.md.
+  const isGitRepo = existsSync(join(root, ".git"));
 
-Project này có MCP server bộ nhớ riêng: **\`${serverName}\`**
-(wiki \`${projectId}\`, team \`${teamId}\`).
+  if (isGitRepo) {
+    const ex = join(root, ".git", "info", "exclude");
+    const cur = existsSync(ex) ? readFileSync(ex, "utf8") : "";
+    if (!cur.includes(".mcp.json")) {
+      mkdirSync(dirname(ex), { recursive: true });
+      writeFileSync(ex, cur + "\n# Local: cấu hình MCP bộ nhớ, chỉ có trên máy này\n" +
+        ".mcp.json\n.cursor/\n.vscode/mcp.json\n.agents/mcp_config.json\n");
+      ok(".git/info/exclude (không commit, không đụng .gitignore)");
+    } else info("⏭  .git/info/exclude đã có");
+    info("repo git → bỏ qua CLAUDE.md, không sửa file được theo dõi");
+  } else {
+    const claudeMd = join(root, "CLAUDE.md");
+    if (existsSync(claudeMd)) info("⏭  CLAUDE.md đã có — không ghi đè");
+    else {
+      // Chỉ khai server nào cho thư mục này. Luật ghi nhớ (đặt tên, ngôn ngữ,
+      // chỉ-ghi-một-chỗ) nằm trong mô tả tool ở custom/mcp-shared-memory/src/
+      // tools.ts — một nguồn duy nhất, mọi server tự có, không nhân bản ra đây.
+      writeFileSync(claudeMd, `# Bộ nhớ chung
 
-## QUAN TRỌNG: ghi nhớ chủ động, không đợi được nhắc
+Thư mục này dùng MCP server **\`${serverName}\`** (wiki \`${projectId}\`,
+team \`${teamId}\`). Mọi repo con bên trong dùng chung wiki đó.
 
-Người dùng sẽ **KHÔNG** nhắc bạn dùng bộ nhớ. Bạn phải tự quản lý nó — chủ
-động, tự động, và im lặng (không báo cáo mỗi lần ghi).
+- **Tra trước khi trả lời**: \`${serverName}\` → \`wiki_search\`
+- **Tự ghi, không đợi được nhắc**: \`${serverName}\` → \`wiki_write\`
+- **KHÔNG dùng \`memory-general\`** ở đây — đó là bộ nhớ cá nhân nằm ngoài mọi
+  project; ghi nội dung project vào đó là lẫn ngữ cảnh và không gỡ ra được.
 
-### 1. Tự động GHI (\`${serverName}\` → \`wiki_write\`)
-
-Ngay khi người dùng để lộ bất kỳ thông tin có giá trị lâu dài nào, gọi
-\`wiki_write\` luôn, không hỏi xin phép:
-
-- **Kỹ thuật & cấu hình**: endpoint, port, domain, tên service, biến môi
-  trường, schema DB, hạ tầng, phiên bản công cụ
-- **Quyết định & lý do**: chọn thư viện/kiến trúc nào và **vì sao**, phương án
-  đã cân nhắc rồi loại bỏ, đánh đổi đã chấp nhận
-- **Quy ước dự án**: coding convention, quy tắc đặt tên, quy trình review,
-  cách đặt commit message
-- **Dặn dò & mốc thời gian**: deadline, việc còn treo, điều cần tránh
-
-### Ngôn ngữ và cách đặt tên
-
-**\`title\` phải là TIẾNG ANH, snake_case** — \`decision_auth_flow\`,
-\`naming_convention\`, \`staging_infra\`, \`vm_system_architecture\`.
-
-Hai lý do. Thứ nhất, hệ thống sinh page id bằng cách bỏ dấu khỏi title, nên
-tiếng Việt có dấu bị băm nát: "Bộ nhớ chung của Bằng" thành
-\`concepts/b-nh-chung-c-a-b-ng\` — không đọc được, không tra theo id được nữa.
-Thứ hai, tiếng Việt không dấu cũng khó đọc và khó đoán khi liệt kê
-(\`quy_tac_cau_hinh_memory_theo_du_an\`), trong khi tiếng Anh vừa ngắn vừa rõ.
-
-**\`content\` viết tiếng Việt có dấu**, giữ nguyên thuật ngữ tiếng Anh (MQTT,
-Compose, RPC, gRPC…). Đừng dịch nội dung sang tiếng Anh: người dùng tra bằng
-tiếng Việt, mà BM25 không dịch — tra tiếng Việt vào kho tiếng Anh là trượt.
-Thuật ngữ tiếng Anh mới là từ khoá mang trọng số cao nhất, nên giữ nguyên.
-
-Nêu cả **lý do** chứ không chỉ kết luận.
-
-Bỏ qua: chào hỏi, cảm ơn, tán gẫu, và những gì đọc thẳng từ code ra được.
-
-### 2. Tự động TRA (\`${serverName}\` → \`wiki_search\`)
-
-Gọi \`wiki_search\` **trước khi trả lời** mọi câu hỏi có thể đã bàn trước đó:
-quyết định cũ, quy ước, cấu hình, "hôm trước mình chốt gì". Đừng vội kết luận
-là không biết khi chưa tra.
-
-## Chỉ ghi MỘT chỗ — đừng nhân đôi
-
-Mọi thứ thuộc project này ghi vào \`${serverName}\`, và **chỉ vào đó**.
-
-**KHÔNG ghi thêm một bản sang \`memory-general\`.** Ghi cả hai chỗ là nhân
-đôi dữ liệu: lần sau tra ra hai bản, sửa một bản thì bản kia lặng lẽ thành sai,
-và không có cách nào biết bản nào mới hơn.
-
-\`memory-general\` chỉ dành cho thứ **không thuộc project nào** — sở thích
-cá nhân, cách làm việc chung, ghi chú vụn. Khi đang làm trong thư mục project
-thì gần như không bao giờ cần tới nó.
-
-Các server có tool trùng tên (\`wiki_write\`, \`wiki_search\`, …) nên phải
-nhìn tiền tố server để chọn cho đúng.
+Các server có tool trùng tên (\`wiki_write\`, \`wiki_search\`, …) nên phải nhìn
+tiền tố server để chọn cho đúng. Luật đặt tên trang và ngôn ngữ nội dung nằm
+trong mô tả của chính tool — đọc ở đó, đừng chép lại vào đây.
 `);
-    ok("CLAUDE.md");
-  } else info("⏭  CLAUDE.md đã có — không ghi đè");
+      ok("CLAUDE.md");
+    }
+  }
 }
 
 console.log(`
