@@ -225,8 +225,9 @@ Script lo trọn gói, chạy lại an toàn (không ghi đè file đã có):
 | 1 | Xác thực admin bằng `deploy/global-images/.admin-key` |
 | 2 | Tạo **team thật trong MemoryCore** — Panel `:8125` nhìn thấy, RBAC áp được |
 | 3 | Tạo wiki tên `<project-id>` trong team đó |
-| 4 | **Bootstrap `draft` → `ready`** (nạp file mầm rồi ingest) — xem mục 10 |
-| 5 | Sinh `.mcp.json`, `.cursor/mcp.json`, `.agents/mcp_config.json`, `.vscode/mcp.json` và `CLAUDE.md` |
+| 4 | **Đăng ký asset trong Core** — không có thì Panel bấm vào wiki sẽ 404 |
+| 5 | **Bootstrap `draft` → `ready`** (nạp file mầm rồi ingest) — xem mục 10 |
+| 6 | Sinh `.mcp.json`, `.cursor/mcp.json`, `.agents/mcp_config.json`, `.vscode/mcp.json` và `CLAUDE.md` |
 
 Tuỳ chọn:
 
@@ -482,6 +483,32 @@ curl -s -X POST http://127.0.0.1:8424/v3/wiki/get \
 
 **Mỗi project mới đều phải làm bước này một lần.** Bỏ qua thì wiki im lặng trả
 rỗng mãi mãi.
+
+### Panel báo "Failed to load Wiki details", chi tiết wiki hiện 0 trang
+
+Danh sách wiki trong Panel vẫn thấy, nhưng bấm vào xem chi tiết thì 0 trang kèm
+toast đỏ. Log `docker logs tdai-memory-hub` sẽ có:
+
+```
+POST /v3/meta/asset/get {"asset_id":"wiki-xxxx"} → 404 asset_not_found
+```
+
+Nguyên nhân: wiki sống ở **hai nơi**. Knowledge giữ file thật; Core giữ một bản
+ghi `asset` dùng để kiểm quyền. `/v3/wiki/create` chỉ tạo cái đầu. Danh sách thẻ
+lấy từ Knowledge nên hiện bình thường, còn trang chi tiết hỏi Core nên 404.
+
+`provision-project.mjs` đã tự làm bước này. Wiki tạo tay thì đăng ký thủ công:
+
+```bash
+curl -s -X POST http://127.0.0.1:8420/v3/meta/asset/create \
+  -H 'Content-Type: application/json' -H 'x-tdai-service-id: default' \
+  -H "x-tdai-user-key: $(cat deploy/global-images/.admin-key)" \
+  -d '{"asset_id":"wiki-xxxx","team_id":"team-xxxx","asset_type":"llm_wiki",
+       "name":"ten-wiki","owner_user_id":"usr-xxxx","source_type":"knowledge",
+       "visibility":"team","status":"approved"}'
+```
+
+`asset_id` phải **dùng lại đúng `wiki_id`** thì hai bên mới khớp.
 
 
 **Docker không khởi động**

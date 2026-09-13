@@ -119,6 +119,29 @@ const wiki = dataOf(await post(KS, "/v3/wiki/create", { team_id: teamId, name: p
 const wikiId = wiki.wiki_id;
 ok(`wiki "${projectId}" → ${wikiId} (status=${wiki.status})`);
 
+// ── 4. đăng ký asset trong Core ────────────────────────────────────────
+// Wiki sống ở HAI nơi: file thật do Knowledge giữ, và một bản ghi "asset" trong
+// Core dùng để kiểm quyền. /v3/wiki/create chỉ tạo cái đầu — thiếu cái sau thì
+// danh sách wiki trong Panel vẫn hiện (lấy từ Knowledge) nhưng bấm vào xem chi
+// tiết là 404 "asset_not_found", kèm toast "Failed to load Wiki details".
+const assetGet = await post(CORE, "/v3/meta/asset/get", { asset_id: wikiId }, true);
+if (!assetGet.json?.code) {
+  info("asset đã đăng ký trong Core");
+} else {
+  dataOf(await post(CORE, "/v3/meta/asset/create", {
+    asset_id: wikiId,               // dùng lại wiki_id làm asset_id để hai bên khớp
+    team_id: teamId,
+    asset_type: "llm_wiki",
+    name: projectId,
+    owner_user_id: userId,
+    source_type: "knowledge",
+    visibility: "team",
+    status: "approved",
+    description: `Wiki bo nho cua project ${projectId}`,
+  }, true), "asset/create");
+  ok("đăng ký asset trong Core (Panel xem được chi tiết wiki)");
+}
+
 // ── 4. bootstrap draft → ready ─────────────────────────────────────────
 if (wiki.status === "ready") {
   info("wiki đã ready, bỏ qua bootstrap");
