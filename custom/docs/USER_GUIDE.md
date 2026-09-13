@@ -484,6 +484,29 @@ curl -s -X POST http://127.0.0.1:8424/v3/wiki/get \
 **Mỗi project mới đều phải làm bước này một lần.** Bỏ qua thì wiki im lặng trả
 rỗng mãi mãi.
 
+### Project lồng trong project: nạp cả hai, chỉ dẫn mâu thuẫn
+
+Khi một project nằm trong thư mục của project khác (ví dụ `b2b/01.webfirst`),
+Claude Code **đi ngược lên cây thư mục và gom** cấu hình của cả thư mục cha chứ
+không thay thế. Session sẽ có:
+
+```
+đang ở 01.webfirst
+  memory-webfirst  ← của thư mục này
+  memory-b2b       ← của thư mục CHA, vẫn nạp
+  memory-general   ← global
+```
+
+Cả hai `CLAUDE.md` cũng vào context, và chúng nói ngược nhau — cái bảo dùng
+`memory-b2b`, cái bảo dùng `memory-webfirst`.
+
+**Lỗi này không báo gì cả**, chỉ âm thầm ghi vào sai wiki. Agent chọn đúng chỉ
+vì file con xuất hiện sau, không phải vì có luật.
+
+`provision-project.mjs` đã ghi sẵn mục "Thư mục gần nhất thắng" vào mọi
+`CLAUDE.md` sinh ra. Nếu bạn viết `CLAUDE.md` bằng tay cho một project lồng
+nhau, nhớ nói rõ điều đó — và luôn nhìn tiền tố server trước khi gọi tool.
+
 ### Panel báo "Failed to load Wiki details", chi tiết wiki hiện 0 trang
 
 Danh sách wiki trong Panel vẫn thấy, nhưng bấm vào xem chi tiết thì 0 trang kèm

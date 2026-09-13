@@ -232,6 +232,18 @@ team \`${teamId}\`). Mọi repo con bên trong dùng chung wiki đó.
 - **KHÔNG dùng \`memory-general\`** ở đây — đó là bộ nhớ cá nhân nằm ngoài mọi
   project; ghi nội dung project vào đó là lẫn ngữ cảnh và không gỡ ra được.
 
+## Thư mục gần nhất thắng
+
+Claude Code đi ngược lên cây thư mục và **gom** cấu hình của cả thư mục cha, chứ
+không thay thế. Nên khi thư mục này nằm trong một project khác, session sẽ nạp
+**nhiều server memory cùng lúc** và đọc **nhiều \`CLAUDE.md\` mâu thuẫn nhau**.
+
+Luật: **chỉ dẫn của file này thắng.** Server của thư mục cha có thể vẫn hiện
+trong danh sách — đừng dùng nó ở đây. Dùng đúng \`${serverName}\`.
+
+Lỗi này không báo gì cả, chỉ âm thầm ghi vào sai wiki, nên phải chủ động nhìn
+tiền tố server trước mỗi lần gọi tool.
+
 Các server có tool trùng tên (\`wiki_write\`, \`wiki_search\`, …) nên phải nhìn
 tiền tố server để chọn cho đúng. Luật đặt tên trang và ngôn ngữ nội dung nằm
 trong mô tả của chính tool — đọc ở đó, đừng chép lại vào đây.
