@@ -226,10 +226,14 @@ Ngay khi người dùng để lộ bất kỳ thông tin có giá trị lâu dà
 
 ### Ngôn ngữ và cách đặt tên
 
-**\`title\` phải là ASCII không dấu, snake_case** — \`decision_auth_flow\`,
-\`convention_naming\`, \`infra_staging\`. Hệ thống sinh page id bằng cách bỏ
-dấu khỏi title, và tiếng Việt có dấu bị băm nát: "Bộ nhớ chung của Bằng" thành
+**\`title\` phải là TIẾNG ANH, snake_case** — \`decision_auth_flow\`,
+\`naming_convention\`, \`staging_infra\`, \`vm_system_architecture\`.
+
+Hai lý do. Thứ nhất, hệ thống sinh page id bằng cách bỏ dấu khỏi title, nên
+tiếng Việt có dấu bị băm nát: "Bộ nhớ chung của Bằng" thành
 \`concepts/b-nh-chung-c-a-b-ng\` — không đọc được, không tra theo id được nữa.
+Thứ hai, tiếng Việt không dấu cũng khó đọc và khó đoán khi liệt kê
+(\`quy_tac_cau_hinh_memory_theo_du_an\`), trong khi tiếng Anh vừa ngắn vừa rõ.
 
 **\`content\` viết tiếng Việt có dấu**, giữ nguyên thuật ngữ tiếng Anh (MQTT,
 Compose, RPC, gRPC…). Đừng dịch nội dung sang tiếng Anh: người dùng tra bằng
